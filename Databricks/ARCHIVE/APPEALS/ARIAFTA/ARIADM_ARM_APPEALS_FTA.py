@@ -93,7 +93,6 @@
 
 # COMMAND ----------
 
-# run custom functions
 import sys
 import os
 from pyspark import pipelines as dp
@@ -2490,25 +2489,18 @@ def stg_appealcasestatus_filtered():
 
 # COMMAND ----------
 
-<<<<<<< HEAD
+
 def add_years(date_col, years):
     return date_col + expr(f'INTERVAL {years} YEARS')
 
-@dlt.table(
-=======
 @dp.table(
->>>>>>> 454f4650 (Update pipeline code to use UC and @dp)
     name="stg_firsttier_filtered",
     comment="Delta Live Table for filtering AppealCase records to archive or delete based on complex conditions.")
 def stg_firsttier_filtered():
-    # Reading base tables
-<<<<<<< HEAD
-    appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
+    appeal_cases =  dp.read("stg_appealcasestatus_filtered")
     FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FTA').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
-=======
     appeal_cases =  dp.read("stg_appealcasestatus_filtered")
     FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
->>>>>>> 454f4650 (Update pipeline code to use UC and @dp)
 
     return FTRetained_cases.orderBy("ac.CaseNo") #FT Retained - ARM
 
@@ -4510,448 +4502,1131 @@ template_paths_and_names = [
 
 ]
 
-templates = {name: "".join([row.value for row in spark.read.text(path).collect()]) for path, name in template_paths_and_names}
+# templates = {name: "".join([row.value for row in spark.read.text(path).collect()]) for path, name in template_paths_and_names}
 
 
 # COMMAND ----------
 
+import pickle
+import zlib
+
+templates = {
+    name: dbutils.fs.head(path, 1048576)
+    for path, name in template_paths_and_names
+}
+
+# Compress the complete template dictionary before it is captured by the UDF.
+templates_blob = zlib.compress(
+    pickle.dumps(templates, protocol=pickle.HIGHEST_PROTOCOL),
+    level=9
+)
+
+print(f"Templates: {len(pickle.dumps(templates)) / 1024 / 1024:.2f} MB")
+print(f"Compressed: {len(templates_blob) / 1024 / 1024:.2f} MB")
+
+# COMMAND ----------
+
 # DBTITLE 1,Function: Generate HTML with Dynamic Row and Template Data
-# Modify the UDF to accept a row object and templates
-def generate_html(row, templates=templates):
-    try:
-        html_template = templates["html_template"]
-        Dependentsdetailstemplate = templates["Dependentsdetailstemplate"]
-        PaymentDetailstemplate = templates["PaymentDetailstemplate"]
-
-        #Convert row to a dictionary
-        row_dict = row.asDict()
-
-        def resolve_address(detained, dc_value, appellant_value):
-            if detained in ("HMP", "IRC"):
-                return dc_value or ""
-            elif detained == "No":
-                return appellant_value or ""
-            elif detained == "Other":
-                return dc_value if dc_value else appellant_value or ""
-            return ""
-
-        date_fields = [
-            "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
-            "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
-            "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
-            "AppellantBirthDate", "DateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived","BFDate"
-        ]
-
-        date_correct_fee_received = row_dict.get("DateCorrectFeeReceived")
-        date_correct_fee_deemed_received = row_dict.get("DateCorrectFeeDeemedReceived")
-
-        if date_correct_fee_received and not date_correct_fee_deemed_received:
-            row_dict["DateCorrectFeeDeemedReceived"] = date_correct_fee_received
-
-        elif date_correct_fee_deemed_received and not date_correct_fee_received:
-            row_dict["DateCorrectFeeReceived"] = date_correct_fee_deemed_received
+# # Modify the UDF to accept a row object and templates
+# def generate_html(row, templates=templates):
+#     templates = pickle.loads(zlib.decompress(templates_blob))
         
-        detained = row_dict.get("Detained")
+#     try:
+#         html_template = templates["html_template"]
+#         Dependentsdetailstemplate = templates["Dependentsdetailstemplate"]
+#         PaymentDetailstemplate = templates["PaymentDetailstemplate"]
 
-        row_dict["AppellantAddress1"] = resolve_address(detained, row_dict.get("DCAddress1"), row_dict.get("AppellantAddress1"))
-        row_dict["AppellantAddress2"] = resolve_address(detained, row_dict.get("DCAddress2"), row_dict.get("AppellantAddress2"))
-        row_dict["AppellantAddress3"] = resolve_address(detained, row_dict.get("DCAddress3"), row_dict.get("AppellantAddress3"))
-        row_dict["AppellantAddress4"] = resolve_address(detained, row_dict.get("DCAddress4"), row_dict.get("AppellantAddress4"))
-        row_dict["AppellantAddress5"] = resolve_address(detained, row_dict.get("DCAddress5"), row_dict.get("AppellantAddress5"))
-        row_dict["DCPostcode"] = row_dict.get("AppellantPostcode") if detained == "No" else row_dict.get("DCPostcode")
-        row_dict["Country"] = row_dict.get("Country") if detained == "No" else ""
+#         #Convert row to a dictionary
+#         row_dict = row.asDict()
+
+#         def resolve_address(detained, dc_value, appellant_value):
+#             if detained in ("HMP", "IRC"):
+#                 return dc_value or ""
+#             elif detained == "No":
+#                 return appellant_value or ""
+#             elif detained == "Other":
+#                 return dc_value if dc_value else appellant_value or ""
+#             return ""
+
+#         date_fields = [
+#             "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
+#             "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
+#             "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
+#             "AppellantBirthDate", "DateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived","BFDate"
+#         ]
+
+#         date_correct_fee_received = row_dict.get("DateCorrectFeeReceived")
+#         date_correct_fee_deemed_received = row_dict.get("DateCorrectFeeDeemedReceived")
+
+#         if date_correct_fee_received and not date_correct_fee_deemed_received:
+#             row_dict["DateCorrectFeeDeemedReceived"] = date_correct_fee_received
+
+#         elif date_correct_fee_deemed_received and not date_correct_fee_received:
+#             row_dict["DateCorrectFeeReceived"] = date_correct_fee_deemed_received
+        
+#         detained = row_dict.get("Detained")
+
+#         row_dict["AppellantAddress1"] = resolve_address(detained, row_dict.get("DCAddress1"), row_dict.get("AppellantAddress1"))
+#         row_dict["AppellantAddress2"] = resolve_address(detained, row_dict.get("DCAddress2"), row_dict.get("AppellantAddress2"))
+#         row_dict["AppellantAddress3"] = resolve_address(detained, row_dict.get("DCAddress3"), row_dict.get("AppellantAddress3"))
+#         row_dict["AppellantAddress4"] = resolve_address(detained, row_dict.get("DCAddress4"), row_dict.get("AppellantAddress4"))
+#         row_dict["AppellantAddress5"] = resolve_address(detained, row_dict.get("DCAddress5"), row_dict.get("AppellantAddress5"))
+#         row_dict["DCPostcode"] = row_dict.get("AppellantPostcode") if detained == "No" else row_dict.get("DCPostcode")
+#         row_dict["Country"] = row_dict.get("Country") if detained == "No" else ""
                 
-        replacements = {
-            f"{{{{{key}}}}}": (
-                format_date_iso(value)
-                if key in date_fields
-                and value is not None
-                else str(value) if value is not None else ""
-            )
-            for key, value in row_dict.items()
-        }
+#         replacements = {
+#             f"{{{{{key}}}}}": (
+#                 format_date_iso(value)
+#                 if key in date_fields
+#                 and value is not None
+#                 else str(value) if value is not None else ""
+#             )
+#             for key, value in row_dict.items()
+#         }
 
-        for placeholder, value in replacements.items():
-            html_template = html_template.replace(placeholder, value)
+#         for placeholder, value in replacements.items():
+#             html_template = html_template.replace(placeholder, value)
         
-        #m7 is StatusDetails, m3 is ListDetails
-        def should_strikethrough(status_id, list_details):
-            """
-            Returns True if the status_id is not present in list_details,
-            or if present but ListId is None.
-            """
-            for l in list_details or []:
-                if getattr(l, "StatusId", None) == status_id:
-                    return getattr(l, "ListId", None) is None
-            return True  # Not found in ListDetails
+#         #m7 is StatusDetails, m3 is ListDetails
+#         def should_strikethrough(status_id, list_details):
+#             """
+#             Returns True if the status_id is not present in list_details,
+#             or if present but ListId is None.
+#             """
+#             for l in list_details or []:
+#                 if getattr(l, "StatusId", None) == status_id:
+#                     return getattr(l, "ListId", None) is None
+#             return True  # Not found in ListDetails
         
-        # Replace placeholders in the template with row data
-        replacements = {
-            "{{CaseNo}}": str(row.CaseNo),
-            "{{AdditionalGroundsPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\" style=\"text-align:center\"></td><td id=\"midpadding\">{AdditionalGrounds.AppealTypeDescription}</td></tr>"
-                for AdditionalGrounds in (row.AppealGroundsDetails or [])) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>',
-            "{{LinkedFilesPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{str(Link.CaseNo)}</td><td id=\"midpadding\">{str(Link.LinkAppellantName)}, {str(Link.LinkAppellantForenames)} ({str(Link.LinkAppellantTitle)})</td><td id=\"midpadding\">{str(Link.LinkDetailComment)}</td></tr>"
-                for i, Link in enumerate(row.LinkedCaseDetails or [])
-            ),
-            "{{PaymentEventsSummaryPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{format_date(transaction.TransactionDate)}</td><td id=\"midpadding\">{transaction.TransactionDescription}</td><td id=\"midpadding\">{transaction.TransactionStatusDesc}</td><td id=\"midpadding\">£{transaction.AmountDue}</td><td id=\"midpadding\">£{transaction.AmountPaid}</td><td id=\"midpadding\">{format_date(transaction.ClearedDate)}</td><td id=\"midpadding\">{transaction.PaymentReference}</td><td id=\"midpadding\">{transaction.AggregatedPaymentURN}</td></tr>"
-                for i, transaction in enumerate(row.TransactionDetails or [])
-            ),
-            "{{CostorderdetailsPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{costorder.AppealStageWhenApplicationMade}</td><td id=\"midpadding\">{format_date(costorder.DateOfApplication)}</td><td id=\"midpadding\">{costorder.AppealStageWhenDecisionMade}</td><td id=\"midpadding\">{costorder.OutcomeOfAppealWhereDecisionMadeDescription}</td><td id=\"midpadding\">{format_date(costorder.DateOfDecision)}</td><td id=\"midpadding\">{costorder.CostOrderDecision}</td><td id=\"midpadding\">{costorder.ApplyingRepresentativeName}</td></tr>"
-                for i, costorder in enumerate(row.CostOrderDetails or [])
-            ),
-            "{{MaintainCostAwardsPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{row.CaseNo}</td><td id=\"midpadding\">{costaward.Name},{costaward.Forenames}({costaward.Title})</td><td id=\"midpadding\">{costaward.AppealStageDescription}</td><td id=\"midpadding\">{format_date(costaward.DateOfApplication)}</td><td id=\"midpadding\">{costaward.TypeOfCostAward}</td><td id=\"midpadding\">{costaward.ApplyingParty}</td><td id=\"midpadding\">{costaward.PayingParty}</td><td id=\"midpadding\">{costaward.MindedToAward}</td><td id=\"midpadding\">{costaward.ObjectionToMindedToAward}</td><td id=\"midpadding\">{costaward.CostsAwardDecision}</td><td id=\"midpadding\">{format_date(costaward.DateOfDecision)}</td><td id=\"midpadding\">{costaward.CostsAmount}</td></tr>"
-                for i, costaward in enumerate(row.CostAwardDetails or [])
-            ),
-            "{{LinkedCasesviewonlyPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{row.CaseNo}</td><td id=\"midpadding\">{linkedcostaward.Name},{linkedcostaward.Forenames}({linkedcostaward.Title})</td><td id=\"midpadding\">{linkedcostaward.AppealStageDescription}</td><td id=\"midpadding\">{format_date(linkedcostaward.DateOfApplication)}</td><td id=\"midpadding\">{linkedcostaward.TypeOfCostAward}</td><td id=\"midpadding\">{linkedcostaward.ApplyingParty}</td><td id=\"midpadding\">{linkedcostaward.PayingParty}</td><td id=\"midpadding\">{linkedcostaward.MindedToAward}</td><td id=\"midpadding\">{linkedcostaward.ObjectionToMindedToAward}</td><td id=\"midpadding\">{linkedcostaward.CostsAwardDecision}</td><td id=\"midpadding\">{format_date(linkedcostaward.DateOfDecision)}</td><td id=\"midpadding\">{linkedcostaward.CostsAmount}</td></tr>"
-                for i, linkedcostaward in enumerate(row.LinkedCostAwardDetails or [])
-            ),
-            "{{DocumentTrackingPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{doc.DocumentDescription}</td><td id=\"midpadding\">{format_date(doc.DateRequested)}</td><td id=\"midpadding\">{format_date(doc.DateRequired)}</td><td id=\"midpadding\">{format_date(doc.DocumentsDateReceived)}</td><td id=\"midpadding\">{format_date(doc.RepresentativeDate)}</td><td id=\"midpadding\">{format_date(doc.POUDate)}</td><td id=\"midpadding\" style=\"text-align:center\">{'&#9745;' if doc.NoLongerRequired else '&#9744'}</td></tr>"
-                for i, doc in enumerate(row.DocumentDetails or [])
-            ),
-            "{{NewMattersPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{newmatter.NewMatterDescription}</td><td id=\"midpadding\">{newmatter.AppealNewMatterNotes}</td><td id=\"midpadding\">{format_date(newmatter.DateReceived)}</td><td id=\"midpadding\">{format_date(newmatter.DateReferredToHO)}</td><td id=\"midpadding\">{newmatter.HODecision}</td><td id=\"midpadding\">{format_date(newmatter.DateHODecision)}</td></tr>"
-                for i, newmatter in enumerate(row.NewMatterDetails or [])
-            ),
-            "{{HumanRightsPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{hr.HumanRightDescription}</td><td id=\"midpadding\" style=\"text-align:center\">✓</td></tr>"
-                for i, hr in enumerate(row.HumanRightDetails or [])
-            ),
-            "{{AppealCategoriesPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{ac.CategoryDescription}</td><td id=\"midpadding\">{ac.Flag}</td><td id=\"midpadding\" style=\"text-align:center\">✓</td></tr>"
-                for i, ac in enumerate(row.AppealCategoryDetails or [])
-            ),
-            "{{StatusPlaceHolder}}": "\n".join(
-                "<tr>"
-                f"<td id=\"midpadding\">{status.CaseStatusDescription}</td>"
-                "<td id=\"midpadding\">"
-                + (
-                    f"<s>{format_date(status.KeyDate)}</s>"
-                    if should_strikethrough(status.StatusId, row.ListDetails)
-                    and status.KeyDate else format_date(status.KeyDate)
+#         # Replace placeholders in the template with row data
+#         replacements = {
+#             "{{CaseNo}}": str(row.CaseNo),
+#             "{{AdditionalGroundsPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\" style=\"text-align:center\"></td><td id=\"midpadding\">{AdditionalGrounds.AppealTypeDescription}</td></tr>"
+#                 for AdditionalGrounds in (row.AppealGroundsDetails or [])) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>',
+#             "{{LinkedFilesPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{str(Link.CaseNo)}</td><td id=\"midpadding\">{str(Link.LinkAppellantName)}, {str(Link.LinkAppellantForenames)} ({str(Link.LinkAppellantTitle)})</td><td id=\"midpadding\">{str(Link.LinkDetailComment)}</td></tr>"
+#                 for i, Link in enumerate(row.LinkedCaseDetails or [])
+#             ),
+#             "{{PaymentEventsSummaryPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{format_date(transaction.TransactionDate)}</td><td id=\"midpadding\">{transaction.TransactionDescription}</td><td id=\"midpadding\">{transaction.TransactionStatusDesc}</td><td id=\"midpadding\">£{transaction.AmountDue}</td><td id=\"midpadding\">£{transaction.AmountPaid}</td><td id=\"midpadding\">{format_date(transaction.ClearedDate)}</td><td id=\"midpadding\">{transaction.PaymentReference}</td><td id=\"midpadding\">{transaction.AggregatedPaymentURN}</td></tr>"
+#                 for i, transaction in enumerate(row.TransactionDetails or [])
+#             ),
+#             "{{CostorderdetailsPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{costorder.AppealStageWhenApplicationMade}</td><td id=\"midpadding\">{format_date(costorder.DateOfApplication)}</td><td id=\"midpadding\">{costorder.AppealStageWhenDecisionMade}</td><td id=\"midpadding\">{costorder.OutcomeOfAppealWhereDecisionMadeDescription}</td><td id=\"midpadding\">{format_date(costorder.DateOfDecision)}</td><td id=\"midpadding\">{costorder.CostOrderDecision}</td><td id=\"midpadding\">{costorder.ApplyingRepresentativeName}</td></tr>"
+#                 for i, costorder in enumerate(row.CostOrderDetails or [])
+#             ),
+#             "{{MaintainCostAwardsPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{row.CaseNo}</td><td id=\"midpadding\">{costaward.Name},{costaward.Forenames}({costaward.Title})</td><td id=\"midpadding\">{costaward.AppealStageDescription}</td><td id=\"midpadding\">{format_date(costaward.DateOfApplication)}</td><td id=\"midpadding\">{costaward.TypeOfCostAward}</td><td id=\"midpadding\">{costaward.ApplyingParty}</td><td id=\"midpadding\">{costaward.PayingParty}</td><td id=\"midpadding\">{costaward.MindedToAward}</td><td id=\"midpadding\">{costaward.ObjectionToMindedToAward}</td><td id=\"midpadding\">{costaward.CostsAwardDecision}</td><td id=\"midpadding\">{format_date(costaward.DateOfDecision)}</td><td id=\"midpadding\">{costaward.CostsAmount}</td></tr>"
+#                 for i, costaward in enumerate(row.CostAwardDetails or [])
+#             ),
+#             "{{LinkedCasesviewonlyPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{row.CaseNo}</td><td id=\"midpadding\">{linkedcostaward.Name},{linkedcostaward.Forenames}({linkedcostaward.Title})</td><td id=\"midpadding\">{linkedcostaward.AppealStageDescription}</td><td id=\"midpadding\">{format_date(linkedcostaward.DateOfApplication)}</td><td id=\"midpadding\">{linkedcostaward.TypeOfCostAward}</td><td id=\"midpadding\">{linkedcostaward.ApplyingParty}</td><td id=\"midpadding\">{linkedcostaward.PayingParty}</td><td id=\"midpadding\">{linkedcostaward.MindedToAward}</td><td id=\"midpadding\">{linkedcostaward.ObjectionToMindedToAward}</td><td id=\"midpadding\">{linkedcostaward.CostsAwardDecision}</td><td id=\"midpadding\">{format_date(linkedcostaward.DateOfDecision)}</td><td id=\"midpadding\">{linkedcostaward.CostsAmount}</td></tr>"
+#                 for i, linkedcostaward in enumerate(row.LinkedCostAwardDetails or [])
+#             ),
+#             "{{DocumentTrackingPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{doc.DocumentDescription}</td><td id=\"midpadding\">{format_date(doc.DateRequested)}</td><td id=\"midpadding\">{format_date(doc.DateRequired)}</td><td id=\"midpadding\">{format_date(doc.DocumentsDateReceived)}</td><td id=\"midpadding\">{format_date(doc.RepresentativeDate)}</td><td id=\"midpadding\">{format_date(doc.POUDate)}</td><td id=\"midpadding\" style=\"text-align:center\">{'&#9745;' if doc.NoLongerRequired else '&#9744'}</td></tr>"
+#                 for i, doc in enumerate(row.DocumentDetails or [])
+#             ),
+#             "{{NewMattersPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{newmatter.NewMatterDescription}</td><td id=\"midpadding\">{newmatter.AppealNewMatterNotes}</td><td id=\"midpadding\">{format_date(newmatter.DateReceived)}</td><td id=\"midpadding\">{format_date(newmatter.DateReferredToHO)}</td><td id=\"midpadding\">{newmatter.HODecision}</td><td id=\"midpadding\">{format_date(newmatter.DateHODecision)}</td></tr>"
+#                 for i, newmatter in enumerate(row.NewMatterDetails or [])
+#             ),
+#             "{{HumanRightsPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{hr.HumanRightDescription}</td><td id=\"midpadding\" style=\"text-align:center\">✓</td></tr>"
+#                 for i, hr in enumerate(row.HumanRightDetails or [])
+#             ),
+#             "{{AppealCategoriesPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{ac.CategoryDescription}</td><td id=\"midpadding\">{ac.Flag}</td><td id=\"midpadding\" style=\"text-align:center\">✓</td></tr>"
+#                 for i, ac in enumerate(row.AppealCategoryDetails or [])
+#             ),
+#             "{{StatusPlaceHolder}}": "\n".join(
+#                 "<tr>"
+#                 f"<td id=\"midpadding\">{status.CaseStatusDescription}</td>"
+#                 "<td id=\"midpadding\">"
+#                 + (
+#                     f"<s>{format_date(status.KeyDate)}</s>"
+#                     if should_strikethrough(status.StatusId, row.ListDetails)
+#                     and status.KeyDate else format_date(status.KeyDate)
+#                 )
+#                 + "</td>"
+#                 f"<td id=\"midpadding\">{status.InterpreterRequired}</td>"
+#                 f"<td id=\"midpadding\">{format_date(status.DecisionDate)}</td>"
+#                 f"<td id=\"midpadding\">{status.DecisionTypeDescription}</td>"
+#                 f"<td id=\"midpadding\">{format_date(status.Promulgated)}</td>"
+#                 "</tr>"
+#                 for i, status in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1)
+#             ),
+#             "{{HistoryPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.Fullname}</td><td id=\"midpadding\">{history.HistoryComment}</td><td id=\"midpadding\">{history.DeletedByUser}</td></tr>"
+#                 for i, history in enumerate(sorted(row.HistoryDetails or [], key=lambda x: x.HistDate, reverse=True), start=1)
+#             ),
+#             "{{bfdiaryPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{format_date(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{format_date(bfdiary.DateCompleted)}</td></tr>"
+#                 for i, bfdiary in enumerate(sorted(row.BFDairyDetails or [], key=lambda x: x.BFDate, reverse=True), start=1)
+#             ),
+#             "{{DependentsPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{dependent.AppellantName}</td><td id=\"midpadding\">{dependent.CaseAppellantRelationship}</td></tr>"
+#                 for i, dependent in enumerate(row.DependentDetails or [])
+#             ),
+#             "{{StatusTypesPlaceHolder}}": "\n".join(
+#                 "<tr>"
+#                 f"<td id=\"midpadding\">{i + 1}</td>"
+#                 f"<td id=\"midpadding\">{statustype.CaseStatusDescription}</td>"
+#                 f"<td id=\"midpadding\">{statustype.DecisionTypeDescription}</td>"                      
+#                 "</tr>"
+#                 for i, statustype in enumerate(row.StatusDetails or [])
+#             )
+#         }
+
+#         for key, value in replacements.items():
+#             html_template = html_template.replace(key, value)
+
+#         # Dependent details handling dynamically
+#         dependent_details_Code = ""
+#         if row.DependentDetails:
+#             for dependent in row.DependentDetails:
+#                 dependent_dict = {f"{{{{{key}}}}}": str(getattr(dependent, key, "") or "") for key in [
+#                     "AppellantName", "AppellantForenames", "AppellantTitle", "CaseAppellantRelationship",
+#                     "AppellantAddress1", "AppellantAddress2", "AppellantAddress3", "AppellantAddress4",
+#                     "AppellantAddress5", "AppellantPostcode", "AppellantTelephone"
+#                 ]}
+#                 dependent_details_Code += Dependentsdetailstemplate
+#                 for key, value in dependent_dict.items():
+#                     dependent_details_Code = dependent_details_Code.replace(key, value)
+#                 dependent_details_Code += "\n"
+
+#             html_template = html_template.replace("{{Dependents}}", "Dependent Details Exists")
+#         else:
+#             empty_dict = {f"{{{{{key}}}}}": "" for key in [
+#                 "AppellantName", "AppellantForenames", "AppellantTitle", "CaseAppellantRelationship",
+#                 "AppellantAddress1", "AppellantAddress2", "AppellantAddress3", "AppellantAddress4",
+#                 "AppellantAddress5", "AppellantPostcode", "AppellantTelephone"
+#             ]}
+#             dependent_details_Code = Dependentsdetailstemplate
+#             for key, value in empty_dict.items():
+#                 dependent_details_Code = dependent_details_Code.replace(key, value)
+#             html_template = html_template.replace("{{Dependents}}", "")
+
+#         # Replace the placeholder with generated dependent details
+#         html_template = html_template.replace("{{DependentsdetailsPlaceHolder}}", dependent_details_Code)
+
+#         # Payment details
+#         payments_details_Code = ''
+#         nested_table_number = 99
+#         payment_number = 0
+#         if row.TransactionDetails:   
+#             for index, payment in enumerate(row.TransactionDetails, start=1):
+#                 nested_table_number += 1
+#                 payment_number += 1
+#                 line = PaymentDetailstemplate.replace("{{TransactionDate}}", format_date_iso(payment.TransactionDate)) \
+#                                              .replace("{{TransactionDescription}}", str(payment.TransactionDescription)) \
+#                                              .replace("{{TransactionStatusDesc}}", str(payment.TransactionStatusDesc)) \
+#                                              .replace("{{LiberataNotifiedDate}}", format_date_iso(payment.LiberataNotifiedDate)) \
+#                                              .replace("{{BarclaycardTransactionId}}", str(payment.BarclaycardTransactionId)) \
+#                                              .replace("{{PaymentReference}}", str(payment.PaymentReference or '')) \
+#                                              .replace("{{OriginalPaymentReference}}", str(payment.OriginalPaymentReference or '')) \
+#                                              .replace("{{AggregatedPaymentURN}}", str(payment.AggregatedPaymentURN or '')) \
+#                                              .replace("{{payerSurname}}", str(payment.PayerSurname or '')) \
+#                                              .replace("{{TransactionNotes}}", str(payment.TransactionNotes or '')) \
+#                                              .replace("{{ExpectedDate}}", format_date_iso(payment.ExpectedDate)) \
+#                                              .replace("{{clearedDate}}", format_date_iso(payment.ClearedDate)) \
+#                                              .replace("{{Amount}}", str(payment.Amount or '')) \
+#                                              .replace("{{Amount_new}}", "" if payment.Amount_new is None else str(payment.Amount_new)) \
+#                                              .replace("{{TransactionMethodDesc}}", str(payment.TransactionMethodDesc or '')) \
+#                                              .replace("{{Last4DigitsCard}}", str(payment.Last4DigitsCard or '')) \
+#                                              .replace("{{CreateUserId}}", str(payment.CreateUserId or '')) \
+#                                              .replace("{{LastEditUserId}}", str(payment.LastEditUserId or '')) \
+#                                              .replace("{{payerForename}}", str(payment.PayerForename or '')) \
+#                                              .replace("{{nested_table_number}}", str(nested_table_number)) \
+#                                              .replace("{{payment_number}}", str(payment_number))
+
+#                 payments_details_Code += line + '\n'
+#         else:
+#             nested_table_number += 1
+#             payment_number += 1
+#             payments_details_Code = PaymentDetailstemplate.replace("{{TransactionDate}}", "") \
+#                                                           .replace("{{TransactionDescription}}", "") \
+#                                                           .replace("{{TransactionStatusDesc}}", "") \
+#                                                           .replace("{{LiberataNotifiedDate}}", "") \
+#                                                           .replace("{{BarclaycardTransactionId}}", "") \
+#                                                           .replace("{{PaymentReference}}", "") \
+#                                                           .replace("{{OriginalPaymentReference}}", "") \
+#                                                           .replace("{{AggregatedPaymentURN}}", "") \
+#                                                           .replace("{{payerSurname}}", "") \
+#                                                           .replace("{{TransactionNotes}}", "") \
+#                                                           .replace("{{ExpectedDate}}", "") \
+#                                                           .replace("{{clearedDate}}", "") \
+#                                                           .replace("{{Amount}}", "") \
+#                                                           .replace("{{Amount_new}}", "") \
+#                                                           .replace("{{TransactionMethodDesc}}", "") \
+#                                                           .replace("{{Last4DigitsCard}}", "") \
+#                                                           .replace("{{CreateUserId}}", "") \
+#                                                           .replace("{{LastEditUserId}}", "") \
+#                                                           .replace("{{payerForename}}", "") \
+#                                                           .replace("{{nested_table_number}}", str(nested_table_number)) \
+#                                                           .replace("{{payment_number}}", str(payment_number))
+#         html_template = html_template.replace(f"{{{{paymentdetailsPlaceHolder}}}}", payments_details_Code)
+
+#         # # CCS Updates
+#         statuscount = len(row.StatusDetails) if row.StatusDetails else 1 # 2
+#         status_details_code = ''
+#         nested_table_number = 30
+#         nested_tab_group_number = 1
+#         tabs_min_height = 200 + (statuscount * 600) if statuscount > 1 else 200
+#         print(tabs_min_height)
+#         content_height = 1000 + (statuscount * 440) if statuscount > 1 else 1000
+#         print(content_height)
+#         additional_tabs_size = 10 + ((statuscount-1) * 420) if statuscount > 1 else 200
+#         print(additional_tabs_size)
+#         nested_tabs_size = 10
+
+#         html_template = html_template.replace(f"{{{{tabs-min-height}}}}", str(tabs_min_height))
+#         html_template = html_template.replace(f"{{{{content-height}}}}", str(content_height))
+#         html_template = html_template.replace(f"{{{{additional-tabs-size}}}}", str(additional_tabs_size))
+
+#         # StatusDetails tabs
+#         nested_table_number = 999
+#         nested_tab_group_number = 999
+#         # for count in range(statuscount):
+#         if row.TempCaseStatusDetails:   
+#             # for index, SDP in enumerate(row.TempCaseStatusDetails, start=1):
+#             for index, SDP in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1):
+                
+#                 #Read relevent template
+#                 casestatusTemplate = templates[SDP.HTMLName]
+
+#                 nested_table_number += 1
+#                 nested_tab_group_number += 1
+#                 nested_tabs_size  = 10 if index == 1 else 400
+
+#                 # Use MiscDate1 for Preliminary Issue, KeyDate otherwise
+#                 if getattr(SDP, "CaseStatusDescription", None) == "Preliminary Issue":
+#                     date_val = format_date_iso(SDP.MiscDate1)
+#                 else:
+#                     date_val = format_date_iso(SDP.KeyDate)
+
+#                 if should_strikethrough(SDP.StatusId, row.ListDetails):
+#                     doh_style = "text-decoration: line-through;"
+#                 else:
+#                     doh_style = ""
+
+#                 line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
+#                                         .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
+#                                         .replace("{{nested_tabs_size}}", str(nested_tabs_size)) \
+#                                         .replace("{{CaseStatusDescription}}", str(SDP.CaseStatusDescription)) \
+#                                         .replace("{{KeyDate}}", date_val if date_val else "") \
+#                                         .replace("{{DOHstyle}}", doh_style) \
+#                                         .replace("{{InterpreterRequired}}", str(SDP.InterpreterRequired or '')) \
+#                                         .replace("{{AdjudicatorSurname}}", str(SDP.LatestAdjudicatorSurname or '')) \
+#                                         .replace("{{AdjudicatorForenames}}", str(SDP.LatestAdjudicatorForenames or ''))  \
+#                                         .replace("{{AdjudicatorTitle}}", str(SDP.LatestAdjudicatorTitle or '')) \
+#                                         .replace("{{AdjudicatorFullName}}", str(SDP.LatestAdjudicatorFullName or '')) \
+#                                         .replace("{{StatusDetailAdjudicatorFullName}}", str(SDP.StatusDetailAdjudicatorFullName or '')) \
+#                                         .replace("{{MiscDate2}}", format_date_iso(SDP.MiscDate2 or '')) \
+#                                         .replace("{{VideoLink}}", str(SDP.VideoLink or '')) \
+#                                         .replace("{{RemittalOutcome}}", str(SDP.RemittalOutcome or '')) \
+#                                         .replace("{{UpperTribunalAppellant}}", str(SDP.UpperTribunalAppellant or '')) \
+#                                         .replace("{{DecisionSentToHO}}", str(SDP.DecisionSentToHO or '')) \
+#                                         .replace("{{DecisionSentToHODate}}", format_date_iso(SDP.DecisionSentToHODate or '')) \
+#                                         .replace("{{InitialHearingPoints}}", str(SDP.InitialHearingPoints or '')) \
+#                                         .replace("{{FinalHearingPoints}}", str(SDP.FinalHearingPoints or '')) \
+#                                         .replace("{{HearingPointsChangeReasondesc}}", str(SDP.HearingPointsChangeReasondesc or '')) \
+#                                         .replace("{{CostOrderAppliedFor}}", str(SDP.CostOrderAppliedFor or '')) \
+#                                         .replace("{{HearingPointsChangeReasonId}}", format_date_iso(SDP.HearingPointsChangeReasonId or '')) \
+#                                         .replace("{{DecisionDate}}", format_date_iso(SDP.DecisionDate or '')) \
+#                                         .replace("{{DecisionByTCW}}", str(SDP.DecisionByTCW or '')) \
+#                                         .replace("{{Allegation}}", str(SDP.Allegation or '')) \
+#                                         .replace("{{DecidingCentre}}", str(SDP.DecidingCentre or '')) \
+#                                         .replace("{{status_DecidingCentre}}", str(SDP.status_DecidingCentre or '')) \
+#                                         .replace("{{Process}}", str(SDP.Process or '')) \
+#                                         .replace("{{Tier}}", str(SDP.Tier or '')) \
+#                                         .replace("{{NoCertAwardDate}}", format_date_iso(SDP.NoCertAwardDate or '')) \
+#                                         .replace("{{WrittenOffDate}}", format_date_iso(SDP.WrittenOffDate or '')) \
+#                                         .replace("{{WrittenOffFileDate}}", format_date_iso(SDP.WrittenOffFileDate or '')) \
+#                                         .replace("{{ReferredEnforceDate}}", format_date_iso(SDP.ReferredEnforceDate or '')) \
+#                                         .replace("{{DeterminationByJudgeSurname}}", format_date_iso(SDP.DeterminationByJudgeSurname or '')) \
+#                                         .replace("{{DeterminationByJudgeForenames}}", format_date_iso(SDP.DeterminationByJudgeForenames or '')) \
+#                                         .replace("{{DeterminationByJudgeTitle}}", format_date_iso(SDP.DeterminationByJudgeTitle or '')) \
+#                                         .replace("{{DeterminationByJudgeFullName}}", str(SDP.DeterminationByJudgeFullName or '')) \
+#                                         .replace("{{MethodOfTyping}}", str(SDP.MethodOfTyping or '')) \
+#                                         .replace("{{adjournDecisionTypeDescription}}", str(SDP.adjournDecisionTypeDescription or '')) \
+#                                         .replace("{{DecisionTypeDescription}}", str(SDP.DecisionTypeDescription or '')) \
+#                                         .replace("{{Promulgated}}", format_date_iso(SDP.Promulgated or '')) \
+#                                         .replace("{{UKAITNo}}", str(SDP.UKAITNo or '')) \
+#                                         .replace("{{Extempore}}", str(SDP.Extempore or '')) \
+#                                         .replace("{{WrittenReasonsRequestedDate}}", format_date_iso(SDP.WrittenReasonsRequestedDate or '')) \
+#                                         .replace("{{TypistSentDate}}", format_date_iso(SDP.TypistSentDate or '')) \
+#                                         .replace("{{ExtemporeMethodOfTyping}}", str(SDP.ExtemporeMethodOfTyping or ''))  \
+#                                         .replace("{{TypistReceivedDate}}", format_date_iso(SDP.TypistReceivedDate or '')) \
+#                                         .replace("{{typingReasonsReceived}}", format_date_iso(SDP.WrittenReasonsRequestedDate or '')) \
+#                                         .replace("{{WrittenReasonsSentDate}}", format_date_iso(SDP.WrittenReasonsSentDate or '')) \
+#                                         .replace("{{DateReceived}}", format_date_iso(SDP.DateReceived or '')) \
+#                                         .replace("{{MiscDate1}}", format_date_iso(SDP.MiscDate1 or '')) \
+#                                         .replace("{{Party}}", str(SDP.Party or '')) \
+#                                         .replace("{{OutOfTime}}", str(SDP.OutOfTime or '')) \
+#                                         .replace("{{adjournInTime}}", str(SDP.adjournInTime or '')) \
+#                                         .replace("{{Letter1Date}}", format_date_iso(SDP.Letter1Date or '')) \
+#                                         .replace("{{Letter2Date}}", format_date_iso(SDP.Letter2Date or '')) \
+#                                         .replace("{{Letter3Date}}", format_date_iso(SDP.Letter3Date or '')) \
+#                                         .replace("{{adjournNotes1}}", str(SDP.adjournNotes1 or '')) \
+#                                         .replace("{{DecisionDate}}", format_date_iso(SDP.DecisionDate or '')) \
+#                                         .replace("{{ListName}}", str(SDP.ListName or '')) \
+#                                         .replace("{{ListName}}", str(SDP.ListName or '')) \
+#                                         .replace("{{ListTypeDesc}}", str(SDP.ListTypeDesc or '')) \
+#                                         .replace("{{HearingTypeDesc}}", str(SDP.HearingTypeDesc or '')) \
+#                                         .replace("{{ListStartTime}}", str(SDP.ListStartTime or '')) \
+#                                         .replace("{{AdjudicatorId}}", str(SDP.LatestAdjudicatorId or '')) \
+#                                         .replace("{{LanguageId}}", str(SDP.LanguageDescription or '')) \
+#                                         .replace("{{ReferredFinanceDate}}", format_date_iso(SDP.ReferredFinanceDate or '')) \
+#                                         .replace("{{CourtActionAuthDate}}", format_date_iso(SDP.CourtActionAuthDate or '')) \
+#                                         .replace("{{BalancePaidDate}}", format_date_iso(SDP.BalancePaidDate or '')) \
+#                                         .replace("{{ReconsiderationHearing}}", str(SDP.ReconsiderationHearing or '')) \
+#                                         .replace("{{UpperTribunalHearingDirection}}", str(SDP.UpperTribunalHearingDirection or '')) \
+#                                         .replace("{{ListRequirementTypeId}}", str(SDP.ListRequirementTypeId or '')) \
+#                                         .replace("{{ListRequirementType}}", str(SDP.ListRequirementType or '')) \
+#                                         .replace("{{CourtSelection}}", str(SDP.CourtSelection or '')) \
+#                                         .replace("{{COAReferenceNumber}}", str(SDP.COAReferenceNumber or '')) \
+#                                         .replace("{{Notes2}}", str(SDP.Notes2 or '')) \
+#                                         .replace("{{HighCourtReference}}", str(SDP.HighCourtReference or '')) \
+#                                         .replace("{{AdminCourtReference}}", str(SDP.AdminCourtReference or '')) \
+#                                         .replace("{{HearingCourt}}", str(SDP.HearingCourt or '')) \
+#                                         .replace("{{ApplicationType}}", str(SDP.ApplicationType or '')) \
+#                                         .replace("{{adjournApplicationType}}", str(SDP.adjournApplicationType or '')) \
+#                                         .replace("{{adjournKeyDate}}", format_date_iso(SDP.adjournKeyDate or '')) \
+#                                         .replace("{{adjournDateReceived}}", format_date_iso(SDP.adjournDateReceived or '')) \
+#                                         .replace("{{adjournmiscdate2}}", format_date_iso(SDP.adjournmiscdate2 or '')) \
+#                                         .replace("{{adjournParty}}", str(SDP.adjournParty or '')) \
+#                                         .replace("{{adjournInTime}}", str(SDP.adjournInTime or '')) \
+#                                         .replace("{{adjournLetter1Date}}", format_date_iso(SDP.adjournLetter1Date or '')) \
+#                                         .replace("{{adjournLetter2Date}}", format_date_iso(SDP.adjournLetter2Date or '')) \
+#                                         .replace("{{adjournAdjudicatorSurname}}", str(SDP.adjournAdjudicatorSurname or '')) \
+#                                         .replace("{{adjournAdjudicatorForenames}}", str(SDP.adjournAdjudicatorForenames or '')) \
+#                                         .replace("{{adjournAdjudicatorTitle}}", str(SDP.adjournAdjudicatorTitle or '')) \
+#                                         .replace("{{adjournAdjudicatorFullName}}", str(SDP.adjournAdjudicatorFullName or '')) \
+#                                         .replace("{{adjournNotes1}}", str(SDP.adjournNotes1 or '')) \
+#                                         .replace("{{adjournDecisionDate}}", format_date_iso(SDP.adjournDecisionDate or '')) \
+#                                         .replace("{{adjournPromulgated}}", format_date_iso(SDP.adjournPromulgated or '')) \
+#                                         .replace("{{HearingCentreDesc}}", str(SDP.HearingCentreDesc or '')) \
+#                                         .replace("{{CourtName}}", str(SDP.CourtName or '')) \
+#                                         .replace("{{ListName}}", str(SDP.ListName or '')) \
+#                                         .replace("{{ListTypeDesc}}", str(SDP.ListTypeDesc or '')) \
+#                                         .replace("{{HearingTypeDesc}}", str(SDP.HearingTypeDesc or '')) \
+#                                         .replace("{{ListStartTime}}", str(SDP.ListStartTime or '')) \
+#                                         .replace("{{StartTime}}", str(SDP.StartTime or '')) \
+#                                         .replace("{{TimeEstimate}}", str(SDP.TimeEstimate or '')) \
+#                                         .replace("{{LanguageDescription}}", str(SDP.LanguageDescription or '')) \
+#                                         .replace("{{AppealCaseNote}}", str(row.AppealCaseNote or '')) \
+#                                         .replace("{{Language}}", str(row.Language or '')) \
+#                                         .replace("{{IRISStatusOfCase}}", str(SDP.IRISStatusOfCase or '')) \
+#                                         .replace("{{ListTypeDescription}}", str(SDP.ListTypeDescription or '')) \
+#                                         .replace("{{HearingTypeDescription}}", str(SDP.HearingTypeDescription or '')) \
+#                                         .replace("{{Judiciary1Name}}", str(SDP.Judiciary1Name or '')) \
+#                                         .replace("{{Judiciary2Name}}", str(SDP.Judiciary2Name or '')) \
+#                                         .replace("{{Judiciary3Name}}", str(SDP.Judiciary3Name or '')) \
+#                                         .replace("{{ReasonAdjourn}}", str(SDP.ReasonAdjourn or '')) \
+#                                         .replace("{{JudgeLabel1}}", str(SDP.JudgeLabel1 or '')) \
+#                                         .replace("{{JudgeLabel2}}", str(SDP.JudgeLabel2 or '')) \
+#                                         .replace("{{JudgeLabel3}}", str(SDP.JudgeLabel3 or '')) \
+#                                         .replace("{{Label1_JudgeValue}}", str(SDP.Label1_JudgeValue or '')) \
+#                                         .replace("{{Label2_JudgeValue}}", str(SDP.Label2_JudgeValue or '')) \
+#                                         .replace("{{Label3_JudgeValue}}", str(SDP.Label3_JudgeValue or '')) \
+#                                         .replace("{{CourtClerkUsher}}", str(SDP.CourtClerkUsher or '')) \
+#                                         .replace("{{CMROrder}}", str(SDP.CMROrder or '')) \
+#                                         .replace("{{AssignedjudicialofficersPlaceHolder}}", f"<tr><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 in ('Judge First Tier', 'Des Judge First Tier') else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 in ('Judge First Tier', 'Des Judge First Tier') else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 in ('Judge First Tier', 'Des Judge First Tier') else '')}</td><td id=\"midpadding\">{(SDP.CourtClerkUsher or '')}</td><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 == 'Upper Trib Judge' else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 == 'Upper Trib Judge' else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 == 'Upper Trib Judge' else '')}</td><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 == 'Non-Legal Member' else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 == 'Non-Legal Member' else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 == 'Non-Legal Member' else '')}</td></tr>") \
+#                                         .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", str("\n".join(
+#                                                 f"<tr><td id=\"midpadding\">{judge.JudgeSurname}, {judge.JudgeForenames} {judge.JudgeTitle}</td><td id=\"midpadding\" style=\"text-align:center\">{'✓' if judge.Required else ''}</td></tr>"
+#                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
+#                                             ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
+#                                         .replace("{{SpecificdirectionsPlaceHolder}}", str("\n".join(
+#                                                 f"<tr><td id=\"midpadding\">{rspecd.SpecificDirection}</td><td id=\"midpadding\">{rspecd.DateRequiredIND}</td><td id=\"midpadding\">{rspecd.DateRequiredAppellantRep}</td><td id=\"midpadding\">{rspecd.DateReceivedIND}</td><td id=\"midpadding\">{rspecd.DateReceivedAppellantRep}</td></tr>"
+#                                                 for i, rspecd in enumerate(SDP.ReviewSpecficDirectionDetails or [])
+#                                             ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
+#                                         .replace("{{StandarddirectionsPlacHolder}}", str("\n".join(
+#                                                 f"<tr><td id=\"midpadding\">{rstd.ReviewStandardDirectionId}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredIND)}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredAppellantRep)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedIND)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedAppellantRep)}</td></tr>"
+#                                                 for i, rstd in enumerate(SDP.ReviewStandardDirectionDirectionDetails or [])
+#                                             ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>'))
+
+#                 status_details_code += line + '\n'
+#         else:
+#             casestatusTemplate = templates["DefaultStatusDetail"]
+#             line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
+#                                     .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
+#                                     .replace("{{nested_tabs_size}}", str(nested_tabs_size)) \
+                                                                                             
+#             status_details_code += line + '\n'
+
+#         html_template = html_template.replace(f"{{{{StatusDetailsPlaceHolder}}}}", status_details_code)
+        
+#         return html_template
+    
+#     except Exception as e:
+#         return f"Error generating HTML for CaseNo {row.CaseNo}: {e}"
+
+# # Register UDF
+# generate_html_udf = udf(generate_html, StringType())
+
+# COMMAND ----------
+
+"""
+Scalar pandas_udf replacement for the generate_html_udf.
+
+Why switch from a plain UDF to a pandas_udf here:
+  - The original UDF decompressed/unpickled `templates_blob` on *every row*.
+    A pandas_udf receives a whole batch (a pandas Series) per call, so the
+    templates can be decompressed once per batch instead -- and with the
+    process-local cache below, effectively once per executor process.
+  - Arrow-batched transfer between the JVM and the Python worker replaces
+    the UDF's row-at-a-time pickling, which is where most of the overhead
+    in the original version came from.
+  - It's a near drop-in replacement for the existing `.withColumn(...)`
+    call -- unlike mapInPandas, you don't need to restructure the pipeline
+    or declare a full output schema.
+
+IMPORTANT - why everything lives inside make_generate_html_pandas_udf:
+  Databricks notebooks give top-level (module/notebook-global) functions a
+  `__module__` that cloudpickle can end up trying to serialize *by reference*
+  rather than by value. On the worker, that reference resolves against
+  `pyspark.databricks.workerwrap`, not your notebook's namespace, so it fails
+  with `AttributeError: Can't get attribute '<name>' on <module
+  'pyspark.databricks.workerwrap'>`. The fix is the same one used earlier on
+  ftpaApplicationDeadline/ftpaApplicationDate: every helper the pandas_udf
+  touches (g, resolve_address, should_strikethrough, generate_html_row, and
+  the template cache) is defined *inside* make_generate_html_pandas_udf, so
+  the whole closure gets pickled by value as one unit instead of by name.
+
+Important behavioural note on nested fields and input shape:
+  When you pass `struct(*cols)` into a scalar pandas_udf, the WHOLE input
+  arrives as a `pandas.DataFrame` (one column per top-level struct field),
+  not a `pandas.Series` -- this is documented pandas_udf behaviour for
+  StructType inputs, and it's easy to miss (calling `.apply()` straight on
+  that DataFrame applies the function per COLUMN, not per row, which throws
+  a `SCHEMA_MISMATCH_FOR_PANDAS_UDF` error). `rows.to_dict(orient="records")`
+  converts it to one dict per case row. Within each of those dicts, nested
+  array<struct> columns come through as lists of `dict`s -- NOT
+  pyspark.sql.Row objects. That means every `row.Field` /
+  `nested_obj.AttributeName` access in the original UDF has to become a
+  `.get("Field")`-style lookup. The `g()` helper below does that (and also
+  tolerates Row objects, in case Arrow conversion ever hands you Rows
+  instead of dicts, so this is safe either way).
+"""
+
+import pickle
+import zlib
+
+import pandas as pd
+from pyspark.sql.functions import col, concat, lit, pandas_udf, regexp_replace, struct, when
+from pyspark.sql.types import StringType
+
+
+def make_generate_html_pandas_udf(templates_blob):
+    """Returns a scalar pandas_udf, with templates_blob and every helper
+    function it needs captured in ONE closure (see module docstring for why
+    nothing here is a top-level function). templates_blob should be plain
+    picklable bytes (e.g. a broadcast variable's .value) -- NOT the broadcast
+    variable itself, since broadcast variables aren't supported inside
+    PySpark UDFs on standard access mode clusters / serverless compute."""
+
+    def g(obj, key, default=None):
+        """Field access that works whether `obj` is a dict (the normal case
+        under mapInPandas/Arrow) or a pyspark.sql.Row (defensive fallback)."""
+        if obj is None:
+            return default
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return getattr(obj, key, default)
+
+
+    def as_list(value):
+        """Normalize a nested ArrayType field to a plain python list.
+
+        Under Arrow-backed pandas_udf/mapInPandas, ArrayType columns arrive
+        as numpy arrays, not python lists -- and a numpy array with more
+        than one element raises `ValueError: The truth value of an array
+        with more than one element is ambiguous` the moment it's used in a
+        boolean context (`if x:`, `x or []`, `x and ...`), which the
+        original UDF's logic relies on constantly. Converting to a real
+        list up front means every one of those checks just works, exactly
+        as it did against Row-based array fields."""
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        try:
+            return list(value)
+        except TypeError:
+            return []
+
+
+    def resolve_address(detained, dc_value, appellant_value):
+        if detained in ("HMP", "IRC"):
+            return dc_value or ""
+        elif detained == "No":
+            return appellant_value or ""
+        elif detained == "Other":
+            return dc_value if dc_value else appellant_value or ""
+        return ""
+
+
+    def should_strikethrough(status_id, list_details):
+        """
+        Returns True if the status_id is not present in list_details,
+        or if present but ListId is None.
+        """
+        for l in (list_details or []):
+            if g(l, "StatusId") == status_id:
+                return g(l, "ListId") is None
+        return True  # Not found in ListDetails
+
+
+    DATE_FIELDS = [
+        "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
+        "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
+        "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
+        "AppellantBirthDate", "DateCorrectFeeReceived", "DateCorrectFeeDeemedReceived", "DateServed",
+        "DateAppealReceived", "BFDate",
+    ]
+
+    DEPENDENT_FIELDS = [
+        "AppellantName", "AppellantForenames", "AppellantTitle", "CaseAppellantRelationship",
+        "AppellantAddress1", "AppellantAddress2", "AppellantAddress3", "AppellantAddress4",
+        "AppellantAddress5", "AppellantPostcode", "AppellantTelephone",
+    ]
+
+
+    def generate_html_row(row_dict: dict, templates: dict) -> str:
+        """Same logic as the original per-row UDF body, adapted for dict-based
+        (mapInPandas) struct/array-of-struct access instead of Row attribute
+        access. Operates on one row (as a plain dict, e.g. from
+        pdf.to_dict(orient='records')) and returns the rendered HTML string."""
+
+        case_no = row_dict.get("CaseNo")
+        try:
+            html_template = templates["html_template"]
+            Dependentsdetailstemplate = templates["Dependentsdetailstemplate"]
+            PaymentDetailstemplate = templates["PaymentDetailstemplate"]
+
+            # Work on a copy so we don't mutate the caller's dict in place
+            row_dict = dict(row_dict)
+
+            date_correct_fee_received = row_dict.get("DateCorrectFeeReceived")
+            date_correct_fee_deemed_received = row_dict.get("DateCorrectFeeDeemedReceived")
+
+            if date_correct_fee_received and not date_correct_fee_deemed_received:
+                row_dict["DateCorrectFeeDeemedReceived"] = date_correct_fee_received
+            elif date_correct_fee_deemed_received and not date_correct_fee_received:
+                row_dict["DateCorrectFeeReceived"] = date_correct_fee_deemed_received
+
+            detained = row_dict.get("Detained")
+
+            row_dict["AppellantAddress1"] = resolve_address(detained, row_dict.get("DCAddress1"), row_dict.get("AppellantAddress1"))
+            row_dict["AppellantAddress2"] = resolve_address(detained, row_dict.get("DCAddress2"), row_dict.get("AppellantAddress2"))
+            row_dict["AppellantAddress3"] = resolve_address(detained, row_dict.get("DCAddress3"), row_dict.get("AppellantAddress3"))
+            row_dict["AppellantAddress4"] = resolve_address(detained, row_dict.get("DCAddress4"), row_dict.get("AppellantAddress4"))
+            row_dict["AppellantAddress5"] = resolve_address(detained, row_dict.get("DCAddress5"), row_dict.get("AppellantAddress5"))
+            row_dict["DCPostcode"] = row_dict.get("AppellantPostcode") if detained == "No" else row_dict.get("DCPostcode")
+            row_dict["Country"] = row_dict.get("Country") if detained == "No" else ""
+
+            def _is_scalar(value):
+                # ArrayType columns arrive as numpy arrays (not python
+                # lists) under Arrow, so isinstance(value, list) alone
+                # misses them - anything with a numpy-style dtype isn't a
+                # scalar template value either.
+                if isinstance(value, (list, dict)):
+                    return False
+                if hasattr(value, "dtype") and hasattr(value, "shape"):
+                    return False
+                return True
+
+            # Flat (top-level, scalar) placeholder replacement
+            flat_replacements = {
+                f"{{{{{key}}}}}": (
+                    format_date_iso(value)
+                    if key in DATE_FIELDS and value is not None
+                    else str(value) if value is not None else ""
                 )
-                + "</td>"
-                f"<td id=\"midpadding\">{status.InterpreterRequired}</td>"
-                f"<td id=\"midpadding\">{format_date(status.DecisionDate)}</td>"
-                f"<td id=\"midpadding\">{status.DecisionTypeDescription}</td>"
-                f"<td id=\"midpadding\">{format_date(status.Promulgated)}</td>"
-                "</tr>"
-                for i, status in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1)
-            ),
-            "{{HistoryPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.Fullname}</td><td id=\"midpadding\">{history.HistoryComment}</td><td id=\"midpadding\">{history.DeletedByUser}</td></tr>"
-                for i, history in enumerate(sorted(row.HistoryDetails or [], key=lambda x: x.HistDate, reverse=True), start=1)
-            ),
-            "{{bfdiaryPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{format_date(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{format_date(bfdiary.DateCompleted)}</td></tr>"
-                for i, bfdiary in enumerate(sorted(row.BFDairyDetails or [], key=lambda x: x.BFDate, reverse=True), start=1)
-            ),
-            "{{DependentsPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{dependent.AppellantName}</td><td id=\"midpadding\">{dependent.CaseAppellantRelationship}</td></tr>"
-                for i, dependent in enumerate(row.DependentDetails or [])
-            ),
-            "{{StatusTypesPlaceHolder}}": "\n".join(
-                "<tr>"
-                f"<td id=\"midpadding\">{i + 1}</td>"
-                f"<td id=\"midpadding\">{statustype.CaseStatusDescription}</td>"
-                f"<td id=\"midpadding\">{statustype.DecisionTypeDescription}</td>"                      
-                "</tr>"
-                for i, statustype in enumerate(row.StatusDetails or [])
-            )
-        }
+                for key, value in row_dict.items()
+                # nested arrays/structs aren't scalar placeholders - skip them here
+                if _is_scalar(value)
+            }
+            for placeholder, value in flat_replacements.items():
+                html_template = html_template.replace(placeholder, value)
 
-        for key, value in replacements.items():
-            html_template = html_template.replace(key, value)
+            appeal_grounds_details = as_list(row_dict.get("AppealGroundsDetails"))
+            linked_case_details = as_list(row_dict.get("LinkedCaseDetails"))
+            transaction_details = as_list(row_dict.get("TransactionDetails"))
+            cost_order_details = as_list(row_dict.get("CostOrderDetails"))
+            cost_award_details = as_list(row_dict.get("CostAwardDetails"))
+            linked_cost_award_details = as_list(row_dict.get("LinkedCostAwardDetails"))
+            document_details = as_list(row_dict.get("DocumentDetails"))
+            new_matter_details = as_list(row_dict.get("NewMatterDetails"))
+            human_right_details = as_list(row_dict.get("HumanRightDetails"))
+            appeal_category_details = as_list(row_dict.get("AppealCategoryDetails"))
+            temp_case_status_details = as_list(row_dict.get("TempCaseStatusDetails"))
+            history_details = as_list(row_dict.get("HistoryDetails"))
+            bf_diary_details = as_list(row_dict.get("BFDairyDetails"))
+            dependent_details = as_list(row_dict.get("DependentDetails"))
+            status_details = as_list(row_dict.get("StatusDetails"))
+            list_details = as_list(row_dict.get("ListDetails"))
 
-        # Dependent details handling dynamically
-        dependent_details_Code = ""
-        if row.DependentDetails:
-            for dependent in row.DependentDetails:
-                dependent_dict = {f"{{{{{key}}}}}": str(getattr(dependent, key, "") or "") for key in [
-                    "AppellantName", "AppellantForenames", "AppellantTitle", "CaseAppellantRelationship",
-                    "AppellantAddress1", "AppellantAddress2", "AppellantAddress3", "AppellantAddress4",
-                    "AppellantAddress5", "AppellantPostcode", "AppellantTelephone"
-                ]}
-                dependent_details_Code += Dependentsdetailstemplate
-                for key, value in dependent_dict.items():
+            # m7 is StatusDetails, m3 is ListDetails
+            nested_replacements = {
+                "{{CaseNo}}": str(case_no),
+                "{{AdditionalGroundsPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\" style=\"text-align:center\"></td><td id=\"midpadding\">{g(ag, 'AppealTypeDescription')}</td></tr>"
+                    for ag in (appeal_grounds_details or [])
+                ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>',
+                "{{LinkedFilesPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{str(g(link, 'CaseNo'))}</td>"
+                    f"<td id=\"midpadding\">{str(g(link, 'LinkAppellantName'))}, {str(g(link, 'LinkAppellantForenames'))} ({str(g(link, 'LinkAppellantTitle'))})</td>"
+                    f"<td id=\"midpadding\">{str(g(link, 'LinkDetailComment'))}</td></tr>"
+                    for link in (linked_case_details or [])
+                ),
+                "{{PaymentEventsSummaryPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{format_date(g(t, 'TransactionDate'))}</td>"
+                    f"<td id=\"midpadding\">{g(t, 'TransactionDescription')}</td>"
+                    f"<td id=\"midpadding\">{g(t, 'TransactionStatusDesc')}</td>"
+                    f"<td id=\"midpadding\">£{g(t, 'AmountDue')}</td>"
+                    f"<td id=\"midpadding\">£{g(t, 'AmountPaid')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(t, 'ClearedDate'))}</td>"
+                    f"<td id=\"midpadding\">{g(t, 'PaymentReference')}</td>"
+                    f"<td id=\"midpadding\">{g(t, 'AggregatedPaymentURN')}</td></tr>"
+                    for t in (transaction_details or [])
+                ),
+                "{{CostorderdetailsPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{g(co, 'AppealStageWhenApplicationMade')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(co, 'DateOfApplication'))}</td>"
+                    f"<td id=\"midpadding\">{g(co, 'AppealStageWhenDecisionMade')}</td>"
+                    f"<td id=\"midpadding\">{g(co, 'OutcomeOfAppealWhereDecisionMadeDescription')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(co, 'DateOfDecision'))}</td>"
+                    f"<td id=\"midpadding\">{g(co, 'CostOrderDecision')}</td>"
+                    f"<td id=\"midpadding\">{g(co, 'ApplyingRepresentativeName')}</td></tr>"
+                    for co in (cost_order_details or [])
+                ),
+                "{{MaintainCostAwardsPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{case_no}</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'Name')},{g(ca, 'Forenames')}({g(ca, 'Title')})</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'AppealStageDescription')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(ca, 'DateOfApplication'))}</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'TypeOfCostAward')}</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'ApplyingParty')}</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'PayingParty')}</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'MindedToAward')}</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'ObjectionToMindedToAward')}</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'CostsAwardDecision')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(ca, 'DateOfDecision'))}</td>"
+                    f"<td id=\"midpadding\">{g(ca, 'CostsAmount')}</td></tr>"
+                    for ca in (cost_award_details or [])
+                ),
+                "{{LinkedCasesviewonlyPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{case_no}</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'Name')},{g(lca, 'Forenames')}({g(lca, 'Title')})</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'AppealStageDescription')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(lca, 'DateOfApplication'))}</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'TypeOfCostAward')}</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'ApplyingParty')}</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'PayingParty')}</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'MindedToAward')}</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'ObjectionToMindedToAward')}</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'CostsAwardDecision')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(lca, 'DateOfDecision'))}</td>"
+                    f"<td id=\"midpadding\">{g(lca, 'CostsAmount')}</td></tr>"
+                    for lca in (linked_cost_award_details or [])
+                ),
+                "{{DocumentTrackingPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{g(doc, 'DocumentDescription')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(doc, 'DateRequested'))}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(doc, 'DateRequired'))}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(doc, 'DocumentsDateReceived'))}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(doc, 'RepresentativeDate'))}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(doc, 'POUDate'))}</td>"
+                    f"<td id=\"midpadding\" style=\"text-align:center\">{'&#9745;' if g(doc, 'NoLongerRequired') else '&#9744'}</td></tr>"
+                    for doc in (document_details or [])
+                ),
+                "{{NewMattersPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{g(nm, 'NewMatterDescription')}</td>"
+                    f"<td id=\"midpadding\">{g(nm, 'AppealNewMatterNotes')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(nm, 'DateReceived'))}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(nm, 'DateReferredToHO'))}</td>"
+                    f"<td id=\"midpadding\">{g(nm, 'HODecision')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(nm, 'DateHODecision'))}</td></tr>"
+                    for nm in (new_matter_details or [])
+                ),
+                "{{HumanRightsPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{g(hr, 'HumanRightDescription')}</td><td id=\"midpadding\" style=\"text-align:center\">✓</td></tr>"
+                    for hr in (human_right_details or [])
+                ),
+                "{{AppealCategoriesPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{g(ac, 'CategoryDescription')}</td><td id=\"midpadding\">{g(ac, 'Flag')}</td><td id=\"midpadding\" style=\"text-align:center\">✓</td></tr>"
+                    for ac in (appeal_category_details or [])
+                ),
+                "{{StatusPlaceHolder}}": "\n".join(
+                    "<tr>"
+                    f"<td id=\"midpadding\">{g(status, 'CaseStatusDescription')}</td>"
+                    "<td id=\"midpadding\">"
+                    + (
+                        f"<s>{format_date(g(status, 'KeyDate'))}</s>"
+                        if should_strikethrough(g(status, "StatusId"), list_details) and g(status, "KeyDate")
+                        else format_date(g(status, "KeyDate"))
+                    )
+                    + "</td>"
+                    f"<td id=\"midpadding\">{g(status, 'InterpreterRequired')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(status, 'DecisionDate'))}</td>"
+                    f"<td id=\"midpadding\">{g(status, 'DecisionTypeDescription')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(status, 'Promulgated'))}</td>"
+                    "</tr>"
+                    for status in sorted(temp_case_status_details or [], key=lambda x: g(x, "StatusId"), reverse=True)
+                ),
+                "{{HistoryPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{format_date(g(h, 'HistDate'))}</td>"
+                    f"<td id=\"midpadding\">{g(h, 'HistTypeDescription')}</td>"
+                    f"<td id=\"midpadding\">{g(h, 'Fullname')}</td>"
+                    f"<td id=\"midpadding\">{g(h, 'HistoryComment')}</td>"
+                    f"<td id=\"midpadding\">{g(h, 'DeletedByUser')}</td></tr>"
+                    for h in sorted(history_details or [], key=lambda x: g(x, "HistDate"), reverse=True)
+                ),
+                "{{bfdiaryPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{format_date(g(b, 'BFDate'))}</td>"
+                    f"<td id=\"midpadding\">{g(b, 'BFTypeDescription')}</td>"
+                    f"<td id=\"midpadding\">{g(b, 'Entry')}</td>"
+                    f"<td id=\"midpadding\">{format_date(g(b, 'DateCompleted'))}</td></tr>"
+                    for b in sorted(bf_diary_details or [], key=lambda x: g(x, "BFDate"), reverse=True)
+                ),
+                "{{DependentsPlaceHolder}}": "\n".join(
+                    f"<tr><td id=\"midpadding\">{g(d, 'AppellantName')}</td><td id=\"midpadding\">{g(d, 'CaseAppellantRelationship')}</td></tr>"
+                    for d in (dependent_details or [])
+                ),
+                "{{StatusTypesPlaceHolder}}": "\n".join(
+                    "<tr>"
+                    f"<td id=\"midpadding\">{i + 1}</td>"
+                    f"<td id=\"midpadding\">{g(st, 'CaseStatusDescription')}</td>"
+                    f"<td id=\"midpadding\">{g(st, 'DecisionTypeDescription')}</td>"
+                    "</tr>"
+                    for i, st in enumerate(status_details or [])
+                ),
+            }
+
+            for key, value in nested_replacements.items():
+                html_template = html_template.replace(key, value)
+
+            # Dependent details handling dynamically
+            dependent_details_Code = ""
+            if dependent_details:
+                for dependent in dependent_details:
+                    dependent_dict = {
+                        f"{{{{{key}}}}}": str(g(dependent, key, "") or "")
+                        for key in DEPENDENT_FIELDS
+                    }
+                    dependent_details_Code += Dependentsdetailstemplate
+                    for key, value in dependent_dict.items():
+                        dependent_details_Code = dependent_details_Code.replace(key, value)
+                    dependent_details_Code += "\n"
+
+                html_template = html_template.replace("{{Dependents}}", "Dependent Details Exists")
+            else:
+                empty_dict = {f"{{{{{key}}}}}": "" for key in DEPENDENT_FIELDS}
+                dependent_details_Code = Dependentsdetailstemplate
+                for key, value in empty_dict.items():
                     dependent_details_Code = dependent_details_Code.replace(key, value)
-                dependent_details_Code += "\n"
+                html_template = html_template.replace("{{Dependents}}", "")
 
-            html_template = html_template.replace("{{Dependents}}", "Dependent Details Exists")
-        else:
-            empty_dict = {f"{{{{{key}}}}}": "" for key in [
-                "AppellantName", "AppellantForenames", "AppellantTitle", "CaseAppellantRelationship",
-                "AppellantAddress1", "AppellantAddress2", "AppellantAddress3", "AppellantAddress4",
-                "AppellantAddress5", "AppellantPostcode", "AppellantTelephone"
-            ]}
-            dependent_details_Code = Dependentsdetailstemplate
-            for key, value in empty_dict.items():
-                dependent_details_Code = dependent_details_Code.replace(key, value)
-            html_template = html_template.replace("{{Dependents}}", "")
+            html_template = html_template.replace("{{DependentsdetailsPlaceHolder}}", dependent_details_Code)
 
-        # Replace the placeholder with generated dependent details
-        html_template = html_template.replace("{{DependentsdetailsPlaceHolder}}", dependent_details_Code)
-
-        # Payment details
-        payments_details_Code = ''
-        nested_table_number = 99
-        payment_number = 0
-        if row.TransactionDetails:   
-            for index, payment in enumerate(row.TransactionDetails, start=1):
+            # Payment details
+            payments_details_Code = ""
+            nested_table_number = 99
+            payment_number = 0
+            if transaction_details:
+                for payment in transaction_details:
+                    nested_table_number += 1
+                    payment_number += 1
+                    line = PaymentDetailstemplate.replace("{{TransactionDate}}", format_date_iso(g(payment, "TransactionDate"))) \
+                        .replace("{{TransactionDescription}}", str(g(payment, "TransactionDescription"))) \
+                        .replace("{{TransactionStatusDesc}}", str(g(payment, "TransactionStatusDesc"))) \
+                        .replace("{{LiberataNotifiedDate}}", format_date_iso(g(payment, "LiberataNotifiedDate"))) \
+                        .replace("{{BarclaycardTransactionId}}", str(g(payment, "BarclaycardTransactionId"))) \
+                        .replace("{{PaymentReference}}", str(g(payment, "PaymentReference") or "")) \
+                        .replace("{{OriginalPaymentReference}}", str(g(payment, "OriginalPaymentReference") or "")) \
+                        .replace("{{AggregatedPaymentURN}}", str(g(payment, "AggregatedPaymentURN") or "")) \
+                        .replace("{{payerSurname}}", str(g(payment, "PayerSurname") or "")) \
+                        .replace("{{TransactionNotes}}", str(g(payment, "TransactionNotes") or "")) \
+                        .replace("{{ExpectedDate}}", format_date_iso(g(payment, "ExpectedDate"))) \
+                        .replace("{{clearedDate}}", format_date_iso(g(payment, "ClearedDate"))) \
+                        .replace("{{Amount}}", str(g(payment, "Amount") or "")) \
+                        .replace("{{Amount_new}}", "" if g(payment, "Amount_new") is None else str(g(payment, "Amount_new"))) \
+                        .replace("{{TransactionMethodDesc}}", str(g(payment, "TransactionMethodDesc") or "")) \
+                        .replace("{{Last4DigitsCard}}", str(g(payment, "Last4DigitsCard") or "")) \
+                        .replace("{{CreateUserId}}", str(g(payment, "CreateUserId") or "")) \
+                        .replace("{{LastEditUserId}}", str(g(payment, "LastEditUserId") or "")) \
+                        .replace("{{payerForename}}", str(g(payment, "PayerForename") or "")) \
+                        .replace("{{nested_table_number}}", str(nested_table_number)) \
+                        .replace("{{payment_number}}", str(payment_number))
+                    payments_details_Code += line + "\n"
+            else:
                 nested_table_number += 1
                 payment_number += 1
-                line = PaymentDetailstemplate.replace("{{TransactionDate}}", format_date_iso(payment.TransactionDate)) \
-                                             .replace("{{TransactionDescription}}", str(payment.TransactionDescription)) \
-                                             .replace("{{TransactionStatusDesc}}", str(payment.TransactionStatusDesc)) \
-                                             .replace("{{LiberataNotifiedDate}}", format_date_iso(payment.LiberataNotifiedDate)) \
-                                             .replace("{{BarclaycardTransactionId}}", str(payment.BarclaycardTransactionId)) \
-                                             .replace("{{PaymentReference}}", str(payment.PaymentReference or '')) \
-                                             .replace("{{OriginalPaymentReference}}", str(payment.OriginalPaymentReference or '')) \
-                                             .replace("{{AggregatedPaymentURN}}", str(payment.AggregatedPaymentURN or '')) \
-                                             .replace("{{payerSurname}}", str(payment.PayerSurname or '')) \
-                                             .replace("{{TransactionNotes}}", str(payment.TransactionNotes or '')) \
-                                             .replace("{{ExpectedDate}}", format_date_iso(payment.ExpectedDate)) \
-                                             .replace("{{clearedDate}}", format_date_iso(payment.ClearedDate)) \
-                                             .replace("{{Amount}}", str(payment.Amount or '')) \
-                                             .replace("{{Amount_new}}", "" if payment.Amount_new is None else str(payment.Amount_new)) \
-                                             .replace("{{TransactionMethodDesc}}", str(payment.TransactionMethodDesc or '')) \
-                                             .replace("{{Last4DigitsCard}}", str(payment.Last4DigitsCard or '')) \
-                                             .replace("{{CreateUserId}}", str(payment.CreateUserId or '')) \
-                                             .replace("{{LastEditUserId}}", str(payment.LastEditUserId or '')) \
-                                             .replace("{{payerForename}}", str(payment.PayerForename or '')) \
-                                             .replace("{{nested_table_number}}", str(nested_table_number)) \
-                                             .replace("{{payment_number}}", str(payment_number))
+                payments_details_Code = PaymentDetailstemplate.replace("{{TransactionDate}}", "") \
+                    .replace("{{TransactionDescription}}", "") \
+                    .replace("{{TransactionStatusDesc}}", "") \
+                    .replace("{{LiberataNotifiedDate}}", "") \
+                    .replace("{{BarclaycardTransactionId}}", "") \
+                    .replace("{{PaymentReference}}", "") \
+                    .replace("{{OriginalPaymentReference}}", "") \
+                    .replace("{{AggregatedPaymentURN}}", "") \
+                    .replace("{{payerSurname}}", "") \
+                    .replace("{{TransactionNotes}}", "") \
+                    .replace("{{ExpectedDate}}", "") \
+                    .replace("{{clearedDate}}", "") \
+                    .replace("{{Amount}}", "") \
+                    .replace("{{Amount_new}}", "") \
+                    .replace("{{TransactionMethodDesc}}", "") \
+                    .replace("{{Last4DigitsCard}}", "") \
+                    .replace("{{CreateUserId}}", "") \
+                    .replace("{{LastEditUserId}}", "") \
+                    .replace("{{payerForename}}", "") \
+                    .replace("{{nested_table_number}}", str(nested_table_number)) \
+                    .replace("{{payment_number}}", str(payment_number))
+            html_template = html_template.replace("{{paymentdetailsPlaceHolder}}", payments_details_Code)
 
-                payments_details_Code += line + '\n'
-        else:
-            nested_table_number += 1
-            payment_number += 1
-            payments_details_Code = PaymentDetailstemplate.replace("{{TransactionDate}}", "") \
-                                                          .replace("{{TransactionDescription}}", "") \
-                                                          .replace("{{TransactionStatusDesc}}", "") \
-                                                          .replace("{{LiberataNotifiedDate}}", "") \
-                                                          .replace("{{BarclaycardTransactionId}}", "") \
-                                                          .replace("{{PaymentReference}}", "") \
-                                                          .replace("{{OriginalPaymentReference}}", "") \
-                                                          .replace("{{AggregatedPaymentURN}}", "") \
-                                                          .replace("{{payerSurname}}", "") \
-                                                          .replace("{{TransactionNotes}}", "") \
-                                                          .replace("{{ExpectedDate}}", "") \
-                                                          .replace("{{clearedDate}}", "") \
-                                                          .replace("{{Amount}}", "") \
-                                                          .replace("{{Amount_new}}", "") \
-                                                          .replace("{{TransactionMethodDesc}}", "") \
-                                                          .replace("{{Last4DigitsCard}}", "") \
-                                                          .replace("{{CreateUserId}}", "") \
-                                                          .replace("{{LastEditUserId}}", "") \
-                                                          .replace("{{payerForename}}", "") \
-                                                          .replace("{{nested_table_number}}", str(nested_table_number)) \
-                                                          .replace("{{payment_number}}", str(payment_number))
-        html_template = html_template.replace(f"{{{{paymentdetailsPlaceHolder}}}}", payments_details_Code)
+            # CCS Updates
+            statuscount = len(status_details) if status_details else 1
+            nested_table_number = 30
+            tabs_min_height = 200 + (statuscount * 600) if statuscount > 1 else 200
+            content_height = 1000 + (statuscount * 440) if statuscount > 1 else 1000
+            additional_tabs_size = 10 + ((statuscount - 1) * 420) if statuscount > 1 else 200
+            nested_tabs_size = 10
 
-        # # CCS Updates
-        statuscount = len(row.StatusDetails) if row.StatusDetails else 1 # 2
-        status_details_code = ''
-        nested_table_number = 30
-        nested_tab_group_number = 1
-        tabs_min_height = 200 + (statuscount * 600) if statuscount > 1 else 200
-        print(tabs_min_height)
-        content_height = 1000 + (statuscount * 440) if statuscount > 1 else 1000
-        print(content_height)
-        additional_tabs_size = 10 + ((statuscount-1) * 420) if statuscount > 1 else 200
-        print(additional_tabs_size)
-        nested_tabs_size = 10
+            html_template = html_template.replace("{{tabs-min-height}}", str(tabs_min_height))
+            html_template = html_template.replace("{{content-height}}", str(content_height))
+            html_template = html_template.replace("{{additional-tabs-size}}", str(additional_tabs_size))
 
-        html_template = html_template.replace(f"{{{{tabs-min-height}}}}", str(tabs_min_height))
-        html_template = html_template.replace(f"{{{{content-height}}}}", str(content_height))
-        html_template = html_template.replace(f"{{{{additional-tabs-size}}}}", str(additional_tabs_size))
+            # StatusDetails tabs
+            nested_table_number = 999
+            nested_tab_group_number = 999
+            status_details_code = ""
+            if temp_case_status_details:
+                for index, SDP in enumerate(
+                    sorted(temp_case_status_details or [], key=lambda x: g(x, "StatusId"), reverse=True), start=1
+                ):
+                    casestatusTemplate = templates[g(SDP, "HTMLName")]
 
-        # StatusDetails tabs
-        nested_table_number = 999
-        nested_tab_group_number = 999
-        # for count in range(statuscount):
-        if row.TempCaseStatusDetails:   
-            # for index, SDP in enumerate(row.TempCaseStatusDetails, start=1):
-            for index, SDP in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1):
-                
-                #Read relevent template
-                casestatusTemplate = templates[SDP.HTMLName]
+                    nested_table_number += 1
+                    nested_tab_group_number += 1
+                    nested_tabs_size = 10 if index == 1 else 400
 
-                nested_table_number += 1
-                nested_tab_group_number += 1
-                nested_tabs_size  = 10 if index == 1 else 400
+                    if g(SDP, "CaseStatusDescription") == "Preliminary Issue":
+                        date_val = format_date_iso(g(SDP, "MiscDate1"))
+                    else:
+                        date_val = format_date_iso(g(SDP, "KeyDate"))
 
-                # Use MiscDate1 for Preliminary Issue, KeyDate otherwise
-                if getattr(SDP, "CaseStatusDescription", None) == "Preliminary Issue":
-                    date_val = format_date_iso(SDP.MiscDate1)
-                else:
-                    date_val = format_date_iso(SDP.KeyDate)
+                    doh_style = "text-decoration: line-through;" if should_strikethrough(g(SDP, "StatusId"), list_details) else ""
 
-                if should_strikethrough(SDP.StatusId, row.ListDetails):
-                    doh_style = "text-decoration: line-through;"
-                else:
-                    doh_style = ""
+                    judge_labels = [g(SDP, "JudgeLabel1"), g(SDP, "JudgeLabel2"), g(SDP, "JudgeLabel3")]
+                    judge_values = [g(SDP, "Label1_JudgeValue"), g(SDP, "Label2_JudgeValue"), g(SDP, "Label3_JudgeValue")]
 
-                line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
-                                        .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
-                                        .replace("{{nested_tabs_size}}", str(nested_tabs_size)) \
-                                        .replace("{{CaseStatusDescription}}", str(SDP.CaseStatusDescription)) \
-                                        .replace("{{KeyDate}}", date_val if date_val else "") \
-                                        .replace("{{DOHstyle}}", doh_style) \
-                                        .replace("{{InterpreterRequired}}", str(SDP.InterpreterRequired or '')) \
-                                        .replace("{{AdjudicatorSurname}}", str(SDP.LatestAdjudicatorSurname or '')) \
-                                        .replace("{{AdjudicatorForenames}}", str(SDP.LatestAdjudicatorForenames or ''))  \
-                                        .replace("{{AdjudicatorTitle}}", str(SDP.LatestAdjudicatorTitle or '')) \
-                                        .replace("{{AdjudicatorFullName}}", str(SDP.LatestAdjudicatorFullName or '')) \
-                                        .replace("{{StatusDetailAdjudicatorFullName}}", str(SDP.StatusDetailAdjudicatorFullName or '')) \
-                                        .replace("{{MiscDate2}}", format_date_iso(SDP.MiscDate2 or '')) \
-                                        .replace("{{VideoLink}}", str(SDP.VideoLink or '')) \
-                                        .replace("{{RemittalOutcome}}", str(SDP.RemittalOutcome or '')) \
-                                        .replace("{{UpperTribunalAppellant}}", str(SDP.UpperTribunalAppellant or '')) \
-                                        .replace("{{DecisionSentToHO}}", str(SDP.DecisionSentToHO or '')) \
-                                        .replace("{{DecisionSentToHODate}}", format_date_iso(SDP.DecisionSentToHODate or '')) \
-                                        .replace("{{InitialHearingPoints}}", str(SDP.InitialHearingPoints or '')) \
-                                        .replace("{{FinalHearingPoints}}", str(SDP.FinalHearingPoints or '')) \
-                                        .replace("{{HearingPointsChangeReasondesc}}", str(SDP.HearingPointsChangeReasondesc or '')) \
-                                        .replace("{{CostOrderAppliedFor}}", str(SDP.CostOrderAppliedFor or '')) \
-                                        .replace("{{HearingPointsChangeReasonId}}", format_date_iso(SDP.HearingPointsChangeReasonId or '')) \
-                                        .replace("{{DecisionDate}}", format_date_iso(SDP.DecisionDate or '')) \
-                                        .replace("{{DecisionByTCW}}", str(SDP.DecisionByTCW or '')) \
-                                        .replace("{{Allegation}}", str(SDP.Allegation or '')) \
-                                        .replace("{{DecidingCentre}}", str(SDP.DecidingCentre or '')) \
-                                        .replace("{{status_DecidingCentre}}", str(SDP.status_DecidingCentre or '')) \
-                                        .replace("{{Process}}", str(SDP.Process or '')) \
-                                        .replace("{{Tier}}", str(SDP.Tier or '')) \
-                                        .replace("{{NoCertAwardDate}}", format_date_iso(SDP.NoCertAwardDate or '')) \
-                                        .replace("{{WrittenOffDate}}", format_date_iso(SDP.WrittenOffDate or '')) \
-                                        .replace("{{WrittenOffFileDate}}", format_date_iso(SDP.WrittenOffFileDate or '')) \
-                                        .replace("{{ReferredEnforceDate}}", format_date_iso(SDP.ReferredEnforceDate or '')) \
-                                        .replace("{{DeterminationByJudgeSurname}}", format_date_iso(SDP.DeterminationByJudgeSurname or '')) \
-                                        .replace("{{DeterminationByJudgeForenames}}", format_date_iso(SDP.DeterminationByJudgeForenames or '')) \
-                                        .replace("{{DeterminationByJudgeTitle}}", format_date_iso(SDP.DeterminationByJudgeTitle or '')) \
-                                        .replace("{{DeterminationByJudgeFullName}}", str(SDP.DeterminationByJudgeFullName or '')) \
-                                        .replace("{{MethodOfTyping}}", str(SDP.MethodOfTyping or '')) \
-                                        .replace("{{adjournDecisionTypeDescription}}", str(SDP.adjournDecisionTypeDescription or '')) \
-                                        .replace("{{DecisionTypeDescription}}", str(SDP.DecisionTypeDescription or '')) \
-                                        .replace("{{Promulgated}}", format_date_iso(SDP.Promulgated or '')) \
-                                        .replace("{{UKAITNo}}", str(SDP.UKAITNo or '')) \
-                                        .replace("{{Extempore}}", str(SDP.Extempore or '')) \
-                                        .replace("{{WrittenReasonsRequestedDate}}", format_date_iso(SDP.WrittenReasonsRequestedDate or '')) \
-                                        .replace("{{TypistSentDate}}", format_date_iso(SDP.TypistSentDate or '')) \
-                                        .replace("{{ExtemporeMethodOfTyping}}", str(SDP.ExtemporeMethodOfTyping or ''))  \
-                                        .replace("{{TypistReceivedDate}}", format_date_iso(SDP.TypistReceivedDate or '')) \
-                                        .replace("{{typingReasonsReceived}}", format_date_iso(SDP.WrittenReasonsRequestedDate or '')) \
-                                        .replace("{{WrittenReasonsSentDate}}", format_date_iso(SDP.WrittenReasonsSentDate or '')) \
-                                        .replace("{{DateReceived}}", format_date_iso(SDP.DateReceived or '')) \
-                                        .replace("{{MiscDate1}}", format_date_iso(SDP.MiscDate1 or '')) \
-                                        .replace("{{Party}}", str(SDP.Party or '')) \
-                                        .replace("{{OutOfTime}}", str(SDP.OutOfTime or '')) \
-                                        .replace("{{adjournInTime}}", str(SDP.adjournInTime or '')) \
-                                        .replace("{{Letter1Date}}", format_date_iso(SDP.Letter1Date or '')) \
-                                        .replace("{{Letter2Date}}", format_date_iso(SDP.Letter2Date or '')) \
-                                        .replace("{{Letter3Date}}", format_date_iso(SDP.Letter3Date or '')) \
-                                        .replace("{{adjournNotes1}}", str(SDP.adjournNotes1 or '')) \
-                                        .replace("{{DecisionDate}}", format_date_iso(SDP.DecisionDate or '')) \
-                                        .replace("{{ListName}}", str(SDP.ListName or '')) \
-                                        .replace("{{ListName}}", str(SDP.ListName or '')) \
-                                        .replace("{{ListTypeDesc}}", str(SDP.ListTypeDesc or '')) \
-                                        .replace("{{HearingTypeDesc}}", str(SDP.HearingTypeDesc or '')) \
-                                        .replace("{{ListStartTime}}", str(SDP.ListStartTime or '')) \
-                                        .replace("{{AdjudicatorId}}", str(SDP.LatestAdjudicatorId or '')) \
-                                        .replace("{{LanguageId}}", str(SDP.LanguageDescription or '')) \
-                                        .replace("{{ReferredFinanceDate}}", format_date_iso(SDP.ReferredFinanceDate or '')) \
-                                        .replace("{{CourtActionAuthDate}}", format_date_iso(SDP.CourtActionAuthDate or '')) \
-                                        .replace("{{BalancePaidDate}}", format_date_iso(SDP.BalancePaidDate or '')) \
-                                        .replace("{{ReconsiderationHearing}}", str(SDP.ReconsiderationHearing or '')) \
-                                        .replace("{{UpperTribunalHearingDirection}}", str(SDP.UpperTribunalHearingDirection or '')) \
-                                        .replace("{{ListRequirementTypeId}}", str(SDP.ListRequirementTypeId or '')) \
-                                        .replace("{{ListRequirementType}}", str(SDP.ListRequirementType or '')) \
-                                        .replace("{{CourtSelection}}", str(SDP.CourtSelection or '')) \
-                                        .replace("{{COAReferenceNumber}}", str(SDP.COAReferenceNumber or '')) \
-                                        .replace("{{Notes2}}", str(SDP.Notes2 or '')) \
-                                        .replace("{{HighCourtReference}}", str(SDP.HighCourtReference or '')) \
-                                        .replace("{{AdminCourtReference}}", str(SDP.AdminCourtReference or '')) \
-                                        .replace("{{HearingCourt}}", str(SDP.HearingCourt or '')) \
-                                        .replace("{{ApplicationType}}", str(SDP.ApplicationType or '')) \
-                                        .replace("{{adjournApplicationType}}", str(SDP.adjournApplicationType or '')) \
-                                        .replace("{{adjournKeyDate}}", format_date_iso(SDP.adjournKeyDate or '')) \
-                                        .replace("{{adjournDateReceived}}", format_date_iso(SDP.adjournDateReceived or '')) \
-                                        .replace("{{adjournmiscdate2}}", format_date_iso(SDP.adjournmiscdate2 or '')) \
-                                        .replace("{{adjournParty}}", str(SDP.adjournParty or '')) \
-                                        .replace("{{adjournInTime}}", str(SDP.adjournInTime or '')) \
-                                        .replace("{{adjournLetter1Date}}", format_date_iso(SDP.adjournLetter1Date or '')) \
-                                        .replace("{{adjournLetter2Date}}", format_date_iso(SDP.adjournLetter2Date or '')) \
-                                        .replace("{{adjournAdjudicatorSurname}}", str(SDP.adjournAdjudicatorSurname or '')) \
-                                        .replace("{{adjournAdjudicatorForenames}}", str(SDP.adjournAdjudicatorForenames or '')) \
-                                        .replace("{{adjournAdjudicatorTitle}}", str(SDP.adjournAdjudicatorTitle or '')) \
-                                        .replace("{{adjournAdjudicatorFullName}}", str(SDP.adjournAdjudicatorFullName or '')) \
-                                        .replace("{{adjournNotes1}}", str(SDP.adjournNotes1 or '')) \
-                                        .replace("{{adjournDecisionDate}}", format_date_iso(SDP.adjournDecisionDate or '')) \
-                                        .replace("{{adjournPromulgated}}", format_date_iso(SDP.adjournPromulgated or '')) \
-                                        .replace("{{HearingCentreDesc}}", str(SDP.HearingCentreDesc or '')) \
-                                        .replace("{{CourtName}}", str(SDP.CourtName or '')) \
-                                        .replace("{{ListName}}", str(SDP.ListName or '')) \
-                                        .replace("{{ListTypeDesc}}", str(SDP.ListTypeDesc or '')) \
-                                        .replace("{{HearingTypeDesc}}", str(SDP.HearingTypeDesc or '')) \
-                                        .replace("{{ListStartTime}}", str(SDP.ListStartTime or '')) \
-                                        .replace("{{StartTime}}", str(SDP.StartTime or '')) \
-                                        .replace("{{TimeEstimate}}", str(SDP.TimeEstimate or '')) \
-                                        .replace("{{LanguageDescription}}", str(SDP.LanguageDescription or '')) \
-                                        .replace("{{AppealCaseNote}}", str(row.AppealCaseNote or '')) \
-                                        .replace("{{Language}}", str(row.Language or '')) \
-                                        .replace("{{IRISStatusOfCase}}", str(SDP.IRISStatusOfCase or '')) \
-                                        .replace("{{ListTypeDescription}}", str(SDP.ListTypeDescription or '')) \
-                                        .replace("{{HearingTypeDescription}}", str(SDP.HearingTypeDescription or '')) \
-                                        .replace("{{Judiciary1Name}}", str(SDP.Judiciary1Name or '')) \
-                                        .replace("{{Judiciary2Name}}", str(SDP.Judiciary2Name or '')) \
-                                        .replace("{{Judiciary3Name}}", str(SDP.Judiciary3Name or '')) \
-                                        .replace("{{ReasonAdjourn}}", str(SDP.ReasonAdjourn or '')) \
-                                        .replace("{{JudgeLabel1}}", str(SDP.JudgeLabel1 or '')) \
-                                        .replace("{{JudgeLabel2}}", str(SDP.JudgeLabel2 or '')) \
-                                        .replace("{{JudgeLabel3}}", str(SDP.JudgeLabel3 or '')) \
-                                        .replace("{{Label1_JudgeValue}}", str(SDP.Label1_JudgeValue or '')) \
-                                        .replace("{{Label2_JudgeValue}}", str(SDP.Label2_JudgeValue or '')) \
-                                        .replace("{{Label3_JudgeValue}}", str(SDP.Label3_JudgeValue or '')) \
-                                        .replace("{{CourtClerkUsher}}", str(SDP.CourtClerkUsher or '')) \
-                                        .replace("{{CMROrder}}", str(SDP.CMROrder or '')) \
-                                        .replace("{{AssignedjudicialofficersPlaceHolder}}", f"<tr><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 in ('Judge First Tier', 'Des Judge First Tier') else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 in ('Judge First Tier', 'Des Judge First Tier') else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 in ('Judge First Tier', 'Des Judge First Tier') else '')}</td><td id=\"midpadding\">{(SDP.CourtClerkUsher or '')}</td><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 == 'Upper Trib Judge' else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 == 'Upper Trib Judge' else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 == 'Upper Trib Judge' else '')}</td><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 == 'Non-Legal Member' else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 == 'Non-Legal Member' else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 == 'Non-Legal Member' else '')}</td></tr>") \
-                                        .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", str("\n".join(
-                                                f"<tr><td id=\"midpadding\">{judge.JudgeSurname}, {judge.JudgeForenames} {judge.JudgeTitle}</td><td id=\"midpadding\" style=\"text-align:center\">{'✓' if judge.Required else ''}</td></tr>"
-                                                for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
-                                            ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
-                                        .replace("{{SpecificdirectionsPlaceHolder}}", str("\n".join(
-                                                f"<tr><td id=\"midpadding\">{rspecd.SpecificDirection}</td><td id=\"midpadding\">{rspecd.DateRequiredIND}</td><td id=\"midpadding\">{rspecd.DateRequiredAppellantRep}</td><td id=\"midpadding\">{rspecd.DateReceivedIND}</td><td id=\"midpadding\">{rspecd.DateReceivedAppellantRep}</td></tr>"
-                                                for i, rspecd in enumerate(SDP.ReviewSpecficDirectionDetails or [])
-                                            ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
-                                        .replace("{{StandarddirectionsPlacHolder}}", str("\n".join(
-                                                f"<tr><td id=\"midpadding\">{rstd.ReviewStandardDirectionId}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredIND)}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredAppellantRep)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedIND)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedAppellantRep)}</td></tr>"
-                                                for i, rstd in enumerate(SDP.ReviewStandardDirectionDirectionDetails or [])
-                                            ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>'))
+                    def value_for_label(target_labels):
+                        for label, value in zip(judge_labels, judge_values):
+                            if label in target_labels:
+                                return value or ""
+                        return ""
 
-                status_details_code += line + '\n'
-        else:
-            casestatusTemplate = templates["DefaultStatusDetail"]
-            line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
-                                    .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
-                                    .replace("{{nested_tabs_size}}", str(nested_tabs_size)) \
-                                                                                             
-            status_details_code += line + '\n'
+                    assigned_officers = (
+                        f"<tr><td id=\"midpadding\">{value_for_label(('Judge First Tier', 'Des Judge First Tier'))}</td>"
+                        f"<td id=\"midpadding\">{g(SDP, 'CourtClerkUsher') or ''}</td>"
+                        f"<td id=\"midpadding\">{value_for_label(('Upper Trib Judge',))}</td>"
+                        f"<td id=\"midpadding\">{value_for_label(('Non-Legal Member',))}</td></tr>"
+                    )
 
-        html_template = html_template.replace(f"{{{{StatusDetailsPlaceHolder}}}}", status_details_code)
-        
-        return html_template
-    
-    except Exception as e:
-        return f"Error generating HTML for CaseNo {row.CaseNo}: {e}"
+                    required_incompatible = "\n".join(
+                        f"<tr><td id=\"midpadding\">{g(judge, 'JudgeSurname')}, {g(judge, 'JudgeForenames')} {g(judge, 'JudgeTitle')}</td>"
+                        f"<td id=\"midpadding\" style=\"text-align:center\">{'✓' if g(judge, 'Required') else ''}</td></tr>"
+                        for judge in as_list(g(SDP, "CaseAdjudicatorsDetails"))
+                    ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>'
 
-# Register UDF
-generate_html_udf = udf(generate_html, StringType())
+                    specific_directions = "\n".join(
+                        f"<tr><td id=\"midpadding\">{g(rspecd, 'SpecificDirection')}</td>"
+                        f"<td id=\"midpadding\">{g(rspecd, 'DateRequiredIND')}</td>"
+                        f"<td id=\"midpadding\">{g(rspecd, 'DateRequiredAppellantRep')}</td>"
+                        f"<td id=\"midpadding\">{g(rspecd, 'DateReceivedIND')}</td>"
+                        f"<td id=\"midpadding\">{g(rspecd, 'DateReceivedAppellantRep')}</td></tr>"
+                        for rspecd in as_list(g(SDP, "ReviewSpecficDirectionDetails"))
+                    ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>'
+
+                    standard_directions = "\n".join(
+                        f"<tr><td id=\"midpadding\">{g(rstd, 'ReviewStandardDirectionId')}</td>"
+                        f"<td id=\"midpadding\">{format_date(g(rstd, 'DateRequiredIND'))}</td>"
+                        f"<td id=\"midpadding\">{format_date(g(rstd, 'DateRequiredAppellantRep'))}</td>"
+                        f"<td id=\"midpadding\">{format_date(g(rstd, 'DateReceivedIND'))}</td>"
+                        f"<td id=\"midpadding\">{format_date(g(rstd, 'DateReceivedAppellantRep'))}</td></tr>"
+                        for rstd in as_list(g(SDP, "ReviewStandardDirectionDirectionDetails"))
+                    ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>'
+
+                    line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number)) \
+                        .replace("{{nested_tab_group_number}}", str(nested_tab_group_number)) \
+                        .replace("{{nested_tabs_size}}", str(nested_tabs_size)) \
+                        .replace("{{CaseStatusDescription}}", str(g(SDP, "CaseStatusDescription"))) \
+                        .replace("{{KeyDate}}", date_val if date_val else "") \
+                        .replace("{{DOHstyle}}", doh_style) \
+                        .replace("{{InterpreterRequired}}", str(g(SDP, "InterpreterRequired") or "")) \
+                        .replace("{{AdjudicatorSurname}}", str(g(SDP, "LatestAdjudicatorSurname") or "")) \
+                        .replace("{{AdjudicatorForenames}}", str(g(SDP, "LatestAdjudicatorForenames") or "")) \
+                        .replace("{{AdjudicatorTitle}}", str(g(SDP, "LatestAdjudicatorTitle") or "")) \
+                        .replace("{{AdjudicatorFullName}}", str(g(SDP, "LatestAdjudicatorFullName") or "")) \
+                        .replace("{{StatusDetailAdjudicatorFullName}}", str(g(SDP, "StatusDetailAdjudicatorFullName") or "")) \
+                        .replace("{{MiscDate2}}", format_date_iso(g(SDP, "MiscDate2") or "")) \
+                        .replace("{{VideoLink}}", str(g(SDP, "VideoLink") or "")) \
+                        .replace("{{RemittalOutcome}}", str(g(SDP, "RemittalOutcome") or "")) \
+                        .replace("{{UpperTribunalAppellant}}", str(g(SDP, "UpperTribunalAppellant") or "")) \
+                        .replace("{{DecisionSentToHO}}", str(g(SDP, "DecisionSentToHO") or "")) \
+                        .replace("{{DecisionSentToHODate}}", format_date_iso(g(SDP, "DecisionSentToHODate") or "")) \
+                        .replace("{{InitialHearingPoints}}", str(g(SDP, "InitialHearingPoints") or "")) \
+                        .replace("{{FinalHearingPoints}}", str(g(SDP, "FinalHearingPoints") or "")) \
+                        .replace("{{HearingPointsChangeReasondesc}}", str(g(SDP, "HearingPointsChangeReasondesc") or "")) \
+                        .replace("{{CostOrderAppliedFor}}", str(g(SDP, "CostOrderAppliedFor") or "")) \
+                        .replace("{{HearingPointsChangeReasonId}}", format_date_iso(g(SDP, "HearingPointsChangeReasonId") or "")) \
+                        .replace("{{DecisionDate}}", format_date_iso(g(SDP, "DecisionDate") or "")) \
+                        .replace("{{DecisionByTCW}}", str(g(SDP, "DecisionByTCW") or "")) \
+                        .replace("{{Allegation}}", str(g(SDP, "Allegation") or "")) \
+                        .replace("{{DecidingCentre}}", str(g(SDP, "DecidingCentre") or "")) \
+                        .replace("{{status_DecidingCentre}}", str(g(SDP, "status_DecidingCentre") or "")) \
+                        .replace("{{Process}}", str(g(SDP, "Process") or "")) \
+                        .replace("{{Tier}}", str(g(SDP, "Tier") or "")) \
+                        .replace("{{NoCertAwardDate}}", format_date_iso(g(SDP, "NoCertAwardDate") or "")) \
+                        .replace("{{WrittenOffDate}}", format_date_iso(g(SDP, "WrittenOffDate") or "")) \
+                        .replace("{{WrittenOffFileDate}}", format_date_iso(g(SDP, "WrittenOffFileDate") or "")) \
+                        .replace("{{ReferredEnforceDate}}", format_date_iso(g(SDP, "ReferredEnforceDate") or "")) \
+                        .replace("{{DeterminationByJudgeSurname}}", format_date_iso(g(SDP, "DeterminationByJudgeSurname") or "")) \
+                        .replace("{{DeterminationByJudgeForenames}}", format_date_iso(g(SDP, "DeterminationByJudgeForenames") or "")) \
+                        .replace("{{DeterminationByJudgeTitle}}", format_date_iso(g(SDP, "DeterminationByJudgeTitle") or "")) \
+                        .replace("{{DeterminationByJudgeFullName}}", str(g(SDP, "DeterminationByJudgeFullName") or "")) \
+                        .replace("{{MethodOfTyping}}", str(g(SDP, "MethodOfTyping") or "")) \
+                        .replace("{{adjournDecisionTypeDescription}}", str(g(SDP, "adjournDecisionTypeDescription") or "")) \
+                        .replace("{{DecisionTypeDescription}}", str(g(SDP, "DecisionTypeDescription") or "")) \
+                        .replace("{{Promulgated}}", format_date_iso(g(SDP, "Promulgated") or "")) \
+                        .replace("{{UKAITNo}}", str(g(SDP, "UKAITNo") or "")) \
+                        .replace("{{Extempore}}", str(g(SDP, "Extempore") or "")) \
+                        .replace("{{WrittenReasonsRequestedDate}}", format_date_iso(g(SDP, "WrittenReasonsRequestedDate") or "")) \
+                        .replace("{{TypistSentDate}}", format_date_iso(g(SDP, "TypistSentDate") or "")) \
+                        .replace("{{ExtemporeMethodOfTyping}}", str(g(SDP, "ExtemporeMethodOfTyping") or "")) \
+                        .replace("{{TypistReceivedDate}}", format_date_iso(g(SDP, "TypistReceivedDate") or "")) \
+                        .replace("{{typingReasonsReceived}}", format_date_iso(g(SDP, "WrittenReasonsRequestedDate") or "")) \
+                        .replace("{{WrittenReasonsSentDate}}", format_date_iso(g(SDP, "WrittenReasonsSentDate") or "")) \
+                        .replace("{{DateReceived}}", format_date_iso(g(SDP, "DateReceived") or "")) \
+                        .replace("{{MiscDate1}}", format_date_iso(g(SDP, "MiscDate1") or "")) \
+                        .replace("{{Party}}", str(g(SDP, "Party") or "")) \
+                        .replace("{{OutOfTime}}", str(g(SDP, "OutOfTime") or "")) \
+                        .replace("{{adjournInTime}}", str(g(SDP, "adjournInTime") or "")) \
+                        .replace("{{Letter1Date}}", format_date_iso(g(SDP, "Letter1Date") or "")) \
+                        .replace("{{Letter2Date}}", format_date_iso(g(SDP, "Letter2Date") or "")) \
+                        .replace("{{Letter3Date}}", format_date_iso(g(SDP, "Letter3Date") or "")) \
+                        .replace("{{adjournNotes1}}", str(g(SDP, "adjournNotes1") or "")) \
+                        .replace("{{ListName}}", str(g(SDP, "ListName") or "")) \
+                        .replace("{{ListTypeDesc}}", str(g(SDP, "ListTypeDesc") or "")) \
+                        .replace("{{HearingTypeDesc}}", str(g(SDP, "HearingTypeDesc") or "")) \
+                        .replace("{{ListStartTime}}", str(g(SDP, "ListStartTime") or "")) \
+                        .replace("{{AdjudicatorId}}", str(g(SDP, "LatestAdjudicatorId") or "")) \
+                        .replace("{{LanguageId}}", str(g(SDP, "LanguageDescription") or "")) \
+                        .replace("{{ReferredFinanceDate}}", format_date_iso(g(SDP, "ReferredFinanceDate") or "")) \
+                        .replace("{{CourtActionAuthDate}}", format_date_iso(g(SDP, "CourtActionAuthDate") or "")) \
+                        .replace("{{BalancePaidDate}}", format_date_iso(g(SDP, "BalancePaidDate") or "")) \
+                        .replace("{{ReconsiderationHearing}}", str(g(SDP, "ReconsiderationHearing") or "")) \
+                        .replace("{{UpperTribunalHearingDirection}}", str(g(SDP, "UpperTribunalHearingDirection") or "")) \
+                        .replace("{{ListRequirementTypeId}}", str(g(SDP, "ListRequirementTypeId") or "")) \
+                        .replace("{{ListRequirementType}}", str(g(SDP, "ListRequirementType") or "")) \
+                        .replace("{{CourtSelection}}", str(g(SDP, "CourtSelection") or "")) \
+                        .replace("{{COAReferenceNumber}}", str(g(SDP, "COAReferenceNumber") or "")) \
+                        .replace("{{Notes2}}", str(g(SDP, "Notes2") or "")) \
+                        .replace("{{HighCourtReference}}", str(g(SDP, "HighCourtReference") or "")) \
+                        .replace("{{AdminCourtReference}}", str(g(SDP, "AdminCourtReference") or "")) \
+                        .replace("{{HearingCourt}}", str(g(SDP, "HearingCourt") or "")) \
+                        .replace("{{ApplicationType}}", str(g(SDP, "ApplicationType") or "")) \
+                        .replace("{{adjournApplicationType}}", str(g(SDP, "adjournApplicationType") or "")) \
+                        .replace("{{adjournKeyDate}}", format_date_iso(g(SDP, "adjournKeyDate") or "")) \
+                        .replace("{{adjournDateReceived}}", format_date_iso(g(SDP, "adjournDateReceived") or "")) \
+                        .replace("{{adjournmiscdate2}}", format_date_iso(g(SDP, "adjournmiscdate2") or "")) \
+                        .replace("{{adjournParty}}", str(g(SDP, "adjournParty") or "")) \
+                        .replace("{{adjournLetter1Date}}", format_date_iso(g(SDP, "adjournLetter1Date") or "")) \
+                        .replace("{{adjournLetter2Date}}", format_date_iso(g(SDP, "adjournLetter2Date") or "")) \
+                        .replace("{{adjournAdjudicatorSurname}}", str(g(SDP, "adjournAdjudicatorSurname") or "")) \
+                        .replace("{{adjournAdjudicatorForenames}}", str(g(SDP, "adjournAdjudicatorForenames") or "")) \
+                        .replace("{{adjournAdjudicatorTitle}}", str(g(SDP, "adjournAdjudicatorTitle") or "")) \
+                        .replace("{{adjournAdjudicatorFullName}}", str(g(SDP, "adjournAdjudicatorFullName") or "")) \
+                        .replace("{{adjournDecisionDate}}", format_date_iso(g(SDP, "adjournDecisionDate") or "")) \
+                        .replace("{{adjournPromulgated}}", format_date_iso(g(SDP, "adjournPromulgated") or "")) \
+                        .replace("{{HearingCentreDesc}}", str(g(SDP, "HearingCentreDesc") or "")) \
+                        .replace("{{CourtName}}", str(g(SDP, "CourtName") or "")) \
+                        .replace("{{StartTime}}", str(g(SDP, "StartTime") or "")) \
+                        .replace("{{TimeEstimate}}", str(g(SDP, "TimeEstimate") or "")) \
+                        .replace("{{LanguageDescription}}", str(g(SDP, "LanguageDescription") or "")) \
+                        .replace("{{AppealCaseNote}}", str(row_dict.get("AppealCaseNote") or "")) \
+                        .replace("{{Language}}", str(row_dict.get("Language") or "")) \
+                        .replace("{{IRISStatusOfCase}}", str(g(SDP, "IRISStatusOfCase") or "")) \
+                        .replace("{{ListTypeDescription}}", str(g(SDP, "ListTypeDescription") or "")) \
+                        .replace("{{HearingTypeDescription}}", str(g(SDP, "HearingTypeDescription") or "")) \
+                        .replace("{{Judiciary1Name}}", str(g(SDP, "Judiciary1Name") or "")) \
+                        .replace("{{Judiciary2Name}}", str(g(SDP, "Judiciary2Name") or "")) \
+                        .replace("{{Judiciary3Name}}", str(g(SDP, "Judiciary3Name") or "")) \
+                        .replace("{{ReasonAdjourn}}", str(g(SDP, "ReasonAdjourn") or "")) \
+                        .replace("{{JudgeLabel1}}", str(g(SDP, "JudgeLabel1") or "")) \
+                        .replace("{{JudgeLabel2}}", str(g(SDP, "JudgeLabel2") or "")) \
+                        .replace("{{JudgeLabel3}}", str(g(SDP, "JudgeLabel3") or "")) \
+                        .replace("{{Label1_JudgeValue}}", str(g(SDP, "Label1_JudgeValue") or "")) \
+                        .replace("{{Label2_JudgeValue}}", str(g(SDP, "Label2_JudgeValue") or "")) \
+                        .replace("{{Label3_JudgeValue}}", str(g(SDP, "Label3_JudgeValue") or "")) \
+                        .replace("{{CourtClerkUsher}}", str(g(SDP, "CourtClerkUsher") or "")) \
+                        .replace("{{CMROrder}}", str(g(SDP, "CMROrder") or "")) \
+                        .replace("{{AssignedjudicialofficersPlaceHolder}}", assigned_officers) \
+                        .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", required_incompatible) \
+                        .replace("{{SpecificdirectionsPlaceHolder}}", specific_directions) \
+                        .replace("{{StandarddirectionsPlacHolder}}", standard_directions)
+
+                    status_details_code += line + "\n"
+            else:
+                casestatusTemplate = templates["DefaultStatusDetail"]
+                line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number)) \
+                    .replace("{{nested_tab_group_number}}", str(nested_tab_group_number)) \
+                    .replace("{{nested_tabs_size}}", str(nested_tabs_size))
+                status_details_code += line + "\n"
+
+            html_template = html_template.replace("{{StatusDetailsPlaceHolder}}", status_details_code)
+
+            return html_template
+
+        except Exception as e:
+            return f"Error generating HTML for CaseNo {case_no}: {e}"
+
+
+
+    # Plain dict cache instead of functools.lru_cache: one less decorator
+    # object for cloudpickle to reason about, and it's just as effective --
+    # this dict lives in the closure, so it persists for the lifetime of
+    # the Python worker process (i.e. across every batch that process
+    # handles), only decompressing templates_blob the first time it's used.
+    _templates_cache = {}
+
+    def _get_templates():
+        if "templates" not in _templates_cache:
+            _templates_cache["templates"] = pickle.loads(zlib.decompress(templates_blob))
+        return _templates_cache["templates"]
+
+    @pandas_udf(StringType())
+    def _generate_html_pandas_udf(rows: pd.DataFrame) -> pd.Series:
+        # NOTE: a StructType input to a scalar pandas_udf arrives as a
+        # pandas.DataFrame (one column per top-level struct field), NOT a
+        # pandas.Series. Calling .apply() directly on that DataFrame applies
+        # the function per COLUMN (axis=0) by default, which is why an
+        # earlier version of this UDF returned one output per field instead
+        # of one per case (a SCHEMA_MISMATCH_FOR_PANDAS_UDF error). Convert
+        # to per-row dicts explicitly so the output Series length matches
+        # the row count.
+        templates = _get_templates()
+        records = rows.to_dict(orient="records")
+        return pd.Series([generate_html_row(record, templates) for record in records])
+
+    return _generate_html_pandas_udf
+
+
+generate_html_udf = make_generate_html_pandas_udf(templates_blob)
 
 # COMMAND ----------
 
@@ -5588,21 +6263,40 @@ def stg_apl_create_json_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_fta_create_html_content
-@dp.table(
+@dlt.table(
     name="stg_apl_create_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_apl_create_html_content():
 
     # Read unique CaseNo tables
     # M1
-    df_combined = dp.read("stg_apl_combined")
+    df_combined = dlt.read("stg_apl_combined")
 
      #HTML extra requirement- status details data
-    df_with_statusdetail_data = df_combined.join(dp.read("stg_statusdetail_data"), "CaseNo", "left").join(dp.read("stg_statichtml_data"), "CaseNo", "left")
+    df_with_statusdetail_data = df_combined.join(dlt.read("stg_statusdetail_data"), "CaseNo", "left").join(dlt.read("stg_statichtml_data"), "CaseNo", "left")
+
+    df_with_html_content = (
+        df_with_statusdetail_data.withColumn(
+            "HTML_Content",
+            generate_html_udf(struct(*[col(c) for c in df_with_statusdetail_data.columns])),
+        )
+        .withColumn(
+            "File_Name",
+            concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")),
+        )
+        .withColumn(
+            "Status",
+            when(
+                (col("HTML_Content").like("Failure%")) | col("HTML_Content").isNull(),
+                "Failure on Create HTML Content",
+            ).otherwise("Successful creating HTML Content"),
+        )
+    )
 
 
-    df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
-        "File_Name", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
+    # df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content",
+    # generate_html_udf(struct(*[col(c) for c in df_with_statusdetail_data.columns]))).withColumn(
+    #     "File_Name", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
    
 
     return df_with_html_content.select("CaseNo","HTML_Content","File_Name","Status")

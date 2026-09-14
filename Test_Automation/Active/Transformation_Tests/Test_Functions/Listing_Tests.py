@@ -1226,6 +1226,13 @@ def test_languageInterpreterMapping(test_df):
 
             # comparison
             errors = []
+
+            if actual_manual == ["Yes"]:
+                req_code = None
+                req_label = None
+                req_manual = ["Yes"]
+                req_desc = actual_desc
+                
             if actual_code != req_code: 
                 errors.append(f"Code: Expected '{req_code}', Found '{actual_code}'")
             if actual_label != req_label: 

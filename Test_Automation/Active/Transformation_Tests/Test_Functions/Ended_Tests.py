@@ -19,7 +19,6 @@ from models.test_result import TestResult
 #Temp solution : using variable below, when each testresult instance is created, to tag with where test run from
 test_from_state = "ended"
 
-
 import inspect
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window

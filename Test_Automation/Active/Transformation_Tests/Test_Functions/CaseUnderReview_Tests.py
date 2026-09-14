@@ -21,6 +21,7 @@ def test_default_mapping_init(json, M1_silver):
     try:
         test_df = json.select(
             "appealReferenceNumber",
+            "ariaDesiredState",
             "caseArgumentAvailable"
         )
 
@@ -41,9 +42,34 @@ def test_default_mapping_init(json, M1_silver):
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
 
 
-def test_CUR_defaultValues(test_df):
+def test_CUR_defaultValues(test_df, fields_to_exclude):
     try:
+        expected_defaults = {
+             "ariaDesiredState": "caseUnderReview"
+        }
+
         results_list = []
+
+        for field, expected in expected_defaults.items():
+            if field in fields_to_exclude:
+                continue
+            condition = (col(field) != expected)
+            if test_df.filter(condition).count() > 0:
+                results_list.append(TestResult(
+                    field, 
+                    "FAIL", 
+                    f"Failed to check Default Mapping for : {field} - expected : {expected} - found {str(test_df.filter(condition).count())} records not matching", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+            else:
+                results_list.append(TestResult(
+                    field, 
+                    "PASS", 
+                    f"Checked Default Mapping for : {field} - found correct value : {expected}", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
 
         # Check for LR (Expected: 'Yes')
         fail_lr = test_df.filter(

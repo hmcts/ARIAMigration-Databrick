@@ -3,7 +3,7 @@ from models.test_result import TestResult
 from Test_Functions.test_helpers import classify_all
 
 
-def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silver, M6_bronze, C, bhc, fields_to_exclude):
+def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silver, M6_bronze, C, bhc, fields_to_exclude, child_fields_to_exclude):
     all_test_results = []
 
     # -- Default mappings --
@@ -13,7 +13,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
          all_test_results.append(test_data_setup)
 
     if test_df != None:
-        all_test_results.extend(cur_tests.test_CUR_defaultValues(test_df))
+        all_test_results.extend(cur_tests.test_CUR_defaultValues(test_df, fields_to_exclude))
 
     # -- hearingResponse --
     test_data_setup = None

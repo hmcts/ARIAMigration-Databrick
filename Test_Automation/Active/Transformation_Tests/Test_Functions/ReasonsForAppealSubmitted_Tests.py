@@ -21,7 +21,8 @@ def test_default_mapping_init(json, M1_silver):
     try:
         test_df = json.select(
             "appealReferenceNumber",
-            "reasonsForAppealDecision"
+            "reasonsForAppealDecision", 
+            "ariaDesiredState"
         )
 
         M1_silver = M1_silver.select(
@@ -40,9 +41,34 @@ def test_default_mapping_init(json, M1_silver):
         error_message = str(e)        
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
 
-def test_RFAS_defaultValues(test_df):
+def test_RFAS_defaultValues(test_df, fields_to_exclude):
     try:
         results_list = []
+        
+        expected_defaults = {
+             "ariaDesiredState": "reasonsForAppealSubmitted"
+        }
+
+        for field, expected in expected_defaults.items():
+            if field in fields_to_exclude:
+                continue
+            condition = (col(field) != expected)
+            if test_df.filter(condition).count() > 0:
+                results_list.append(TestResult(
+                    field, 
+                    "FAIL", 
+                    f"Failed to check Default Mapping for : {field} - expected : {expected} - found {str(test_df.filter(condition).count())} records not matching", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+            else:
+                results_list.append(TestResult(
+                    field, 
+                    "PASS", 
+                    f"Checked Default Mapping for : {field} - found correct value : {expected}", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
 
         acceptance_critera_aip = test_df.filter(
             ((col("dv_representation") == "AIP") & (col("reasonsForAppealDecision") != "This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal."))
@@ -159,7 +185,7 @@ def test_hearingResponse(test_df):
             # expected field mapping
             expected_fields = {
                 "Hearing Centre": str(row.HC or "N/A"),
-                "Hearing Date": str(row.HD or "N/A"),
+                "Hearing Date": str(row.HD)[:10] if row.HD else "N/A",
                 "Hearing Type": str(row.HT or "N/A"),
                 "Court": str(row.CN or "N/A"),
                 "List Type": str(row.LT or "N/A"),

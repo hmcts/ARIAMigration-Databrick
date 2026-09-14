@@ -6790,6 +6790,9 @@ def test_oocLrCountryGovUkAdminJ_test1(test_df_sd,external_storage,spark):
 #######################
 def test_default_mapping_init(json):
     try:
+        if "isHomeOfficeIntegrationEnabled" not in json.columns:
+            json = json.withColumn("isHomeOfficeIntegrationEnabled", lit(None).cast("string"))
+            
         test_df = json.select(
             "appealReferenceNumber",
             "isAppealReferenceNumberAvailable",
@@ -6942,29 +6945,31 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
                 ))
         
         allowed_appeal_types = ["EA", "EU", "HU", "PA"]
+        ho_appeal_types = ["PA", "RP"]
         conditional_checks = [
-            ("feePaymentAppealType", "Yes"),
-            ("paymentStatus", "Payment Pending"),
-            ("hasServiceRequestAlready", "No"),
-            ("feeVersion", "2")
+            ("feePaymentAppealType", "Yes", allowed_appeal_types),
+            ("paymentStatus", "Payment Pending", allowed_appeal_types),
+            ("hasServiceRequestAlready", "No", allowed_appeal_types),
+            ("feeVersion", "2", allowed_appeal_types),
+            ("isHomeOfficeIntegrationEnabled", "Yes", ho_appeal_types)
         ]
 
-        for field, expected_val in conditional_checks:
+        for field, expected_val, target_appeal_types in conditional_checks:
             if field in fields_to_exclude:
                 continue
             invalid_records = test_df.filter(
-                (col("appealType").isin(allowed_appeal_types)) & (col(field) != expected_val)
+                (col("appealType").isin(target_appeal_types)) & (col(field) != expected_val)
             )
             
             if invalid_records.count() != 0:
                 results_list.append(TestResult(
                     field, "FAIL", 
-                    f"Conditional Default Failed: {invalid_records.count()} cases found where appealType is {allowed_appeal_types} but {field} is not '{expected_val}'", 
+                    f"Conditional Default Failed: {invalid_records.count()} cases found where appealType is {target_appeal_types} but {field} is not '{expected_val}'", 
                     test_from_state, inspect.stack()[0].function))
             else:
                 results_list.append(TestResult(
                     field, "PASS", 
-                    f"Conditional Default Passed: {field} correctly set for appeal types {allowed_appeal_types}", 
+                    f"Conditional Default Passed: {field} correctly set for appeal types {target_appeal_types}", 
                     test_from_state, inspect.stack()[0].function))
        
         

@@ -145,6 +145,7 @@ def test_sponsorDetails_init(json, M1_bronze, C):
 
 # CategoryId 38 means out of country case, so we need to check that sponsor fields are not populated if 38 is not included, rather than vice versa, and hasSponsor should always be no
 
+
 # hasSponsor - "IF CategoryId IN [38] = Include; ELSE OMIT, IF SponsorName IS NOT NULL = Yes; ELSE No"
 #######################
 # hasSponsor - IF CategoryId not in 38 and hasSponsor not omitted 

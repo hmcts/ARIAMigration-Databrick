@@ -22,6 +22,7 @@ def test_default_mapping_init(json):
     try:
         test_df = json.select(
             "ftpaFirstDecision",
+            "ariaDesiredState",
             "ftpaFinalDecisionForDisplay",
             "reasonRehearingRule32",
             "rule32ListingAdditionalIns",
@@ -41,6 +42,7 @@ def test_dec_b_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
             "ftpaFirstDecision": "remadeRule32",
+            "ariaDesiredState": "decided",
             "ftpaFinalDecisionForDisplay": "undecided",
             "reasonRehearingRule32": "Set aside and to be reheard under rule 32",
             "rule32ListingAdditionalIns": "This is an ARIA Migrated case. Please refer to the documents for any additional listing instructions.",

@@ -27,6 +27,7 @@ def test_default_mapping_init(json):
             "courtReferenceNumber",
             "caseFlagSetAsideReheardExists",
             "remittalDocuments",
+            "ariaDesiredState",
             "uploadOtherRemittalDocs"
         )
         return test_df, True
@@ -38,6 +39,7 @@ def test_remitted_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
             "rehearingReason": "Remitted",
+            "ariaDesiredState": "remitted",
             "sourceOfRemittal": "Upper Tribunal",
             "courtReferenceNumber": "This is a migrated ARIA case. Please refer to the documents.",
             "caseFlagSetAsideReheardExists": "Yes"

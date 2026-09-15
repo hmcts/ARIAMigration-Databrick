@@ -22,6 +22,7 @@ def test_default_mapping_init(json):
     try:
         test_df = json.select(
             "anonymityOrder",
+            "ariaDesiredState",
             "appealDecisionAvailable",
             "finalDecisionAndReasonsDocuments"
         )
@@ -34,6 +35,7 @@ def test_dec_a_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
             "anonymityOrder": "No",
+            "ariaDesiredState": "decided",
             "appealDecisionAvailable": "Yes"
 
         }

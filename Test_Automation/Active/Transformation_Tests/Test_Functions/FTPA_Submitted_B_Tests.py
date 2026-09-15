@@ -24,7 +24,8 @@ test_from_state = "ftpaSubmitted(b)"
 def test_default_mapping_init(json):
     try:
         test_df = json.select(
-            "judgeAllocationExists"
+            "judgeAllocationExists", 
+            "ariaDesiredState"
         )
         return test_df, True
     except Exception as e:
@@ -34,7 +35,8 @@ def test_default_mapping_init(json):
 def test_ftpa_b_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
-            "judgeAllocationExists": "Yes"
+            "judgeAllocationExists": "Yes",
+            "ariaDesiredState": "ftpaSubmitted"
         }
         
         results_list = []

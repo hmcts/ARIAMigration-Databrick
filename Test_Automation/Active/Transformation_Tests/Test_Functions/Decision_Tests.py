@@ -24,6 +24,7 @@ def test_default_mapping_init(json):
     try:
         test_df = json.select(
             "scheduleOfIssuesAgreement",
+            "ariaDesiredState",
             "scheduleOfIssuesDisagreementDescription",
             "immigrationHistoryAgreement",
             "immigrationHistoryDisagreementDescription",
@@ -42,6 +43,7 @@ def test_dec_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
             "scheduleOfIssuesAgreement": "No",
+            "ariaDesiredState": "decision",
             "scheduleOfIssuesDisagreementDescription": "This is a migrated ARIA case. Please see the documents for information on the schedule of issues.",
             "immigrationHistoryAgreement": "No",
             "immigrationHistoryDisagreementDescription": "This is a migrated ARIA case. Please see the documents for information on the immigration history.",

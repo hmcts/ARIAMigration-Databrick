@@ -22,6 +22,7 @@ def test_default_mapping_init(json):
     try:
         test_df = json.select(
             "isRemoteHearing",
+            "ariaDesiredState",
             "isMultimediaAllowed",
             "multimediaTribunalResponse",
             "multimediaDecisionForDisplay",
@@ -67,6 +68,7 @@ def test_default_mapping_init(json):
 def test_pFH_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
+            "ariaDesiredState": "prepareForHearing",
             "isRemoteHearing": "No",
             "isMultimediaAllowed": "Granted",
             "multimediaTribunalResponse": "This is a migrated ARIA case. Please refer to the documents.",

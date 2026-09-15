@@ -24,6 +24,7 @@ def test_default_mapping_init(json, M1_silver, bac, M1_Bronze):
     try:
         test_df = json.select(
             "appealReferenceNumber",
+            "ariaDesiredState",
             "appealOutOfCountry",
             "caseArgumentAvailable",
             "reasonsForAppealDecision",
@@ -88,10 +89,36 @@ def test_default_mapping_init(json, M1_silver, bac, M1_Bronze):
 
 from pyspark.sql.functions import col, when, lit
 
-def test_Listing_defaultValues(test_df):
+def test_Listing_defaultValues(test_df, fields_to_exclude):
     try:
+        expected_defaults = {
+             "ariaDesiredState": "listing"
+        }
+
         results_list = []
         
+        for field, expected in expected_defaults.items():
+            if field in fields_to_exclude:
+                continue
+            condition = (col(field) != expected)
+            fail_count = test_df.filter(condition).count()
+            if fail_count > 0:
+                results_list.append(TestResult(
+                    field, 
+                    "FAIL", 
+                    f"Failed to check Default Mapping for : {field} - expected : {expected} - found {fail_count} records not matching", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+            else:
+                results_list.append(TestResult(
+                    field, 
+                    "PASS", 
+                    f"Checked Default Mapping for : {field} - found correct value : {expected}", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+
         # Expected Strings
         aria_notice_text = "This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal."
         aria_reqs_text = "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."

@@ -103,6 +103,7 @@ def test_default_mapping_init(json_data, M1_silver, M3_bronze):
         # 3. Project ALL required fields safely (adds array/scalar fallbacks for missing schema fields)
         test_df = joined_df.select(
             "*",
+            "ariaDesiredState",
             # Target array fields
             safe_col(joined_df, "witnessDetailsCollection", default_type="array"),
             safe_col(joined_df, "witnessDetails", default_type="array"),
@@ -189,7 +190,7 @@ def test_ended_defaultValues(test_df, fields_to_exclude=None):
     }
 
     expected_defaults = {
-        "isAppellantAttendingTheHearing": "Yes", "isAppellantGivingOralEvidence": "Yes", "isWitnessesAttending": "No",
+        "isAppellantAttendingTheHearing": "Yes", "ariaDesiredState": "ended", "isAppellantGivingOralEvidence": "Yes", "isWitnessesAttending": "No",
         "isHearingRoomNeeded": "Yes", "isHearingLoopNeeded": "Yes", "remoteVideoCall": "Yes",
         "remoteVideoCallDescription": "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form.",
         "physicalOrMentalHealthIssues": "Yes", "physicalOrMentalHealthIssuesDescription": "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form.",

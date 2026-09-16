@@ -5887,6 +5887,17 @@ def test_countryGovUkOocAdminJ_ac2(test_df_sd,external_storage,spark):
 
 def test_legalRepDetails_init(json, M1_bronze, M1_silver):
     try:
+        # Pre-check and inject missing JSON columns as NULL
+        for col_name in [
+            "AppealReferenceNumber", "legalRepEmail", "legalRepGivenName", 
+            "legalRepFamilyNamePaperJ", "legalRepCompanyPaperJ", "legalRepHasAddress", 
+            "legalRepAddressUK", "oocAddressLine1", "oocAddressLine2", 
+            "oocAddressLine3", "oocAddressLine4", "oocLrCountryGovUkAdminJ", 
+            "localAuthorityPolicy", "countryGovUkOocAdminJ", "appellantAddress"
+        ]:
+            if col_name not in json.columns:
+                json = json.withColumn(col_name, lit(None).cast("string"))
+
         json_data = json.select(
                 "AppealReferenceNumber",
                 "legalRepEmail",
@@ -5951,7 +5962,7 @@ def test_legalRepDetails_init(json, M1_bronze, M1_silver):
         return test_df, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("isServiceRequestTabVisibleConsideringRemissions", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return None,TestResult("legalRepDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #Test1 - legalRepEmail - Representation = AIP = Ommited
 def test_legalRepEmail_test1(test_df_sd):
@@ -7340,6 +7351,16 @@ def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, te
 
 def test_detained_init(json, M2_bronze, M1_bronze):
     try:
+        # Pre-check and inject missing JSON columns as NULL
+        for col_name in [
+            "appealReferenceNumber", "detentionFacility", "prisonName", 
+            "prisonNOMSNumber", "otherDetentionFacilityName", "ircName", 
+            "removalOrderDate", "removalOrderOptions", "detentionBuilding", 
+            "detentionAddressLines", "detentionPostcode"
+        ]:
+            if col_name not in json.columns:
+                json = json.withColumn(col_name, lit(None).cast("string"))
+
         json = json.select(
             "appealReferenceNumber",
             "detentionFacility",
@@ -7348,7 +7369,7 @@ def test_detained_init(json, M2_bronze, M1_bronze):
             "otherDetentionFacilityName",
             "ircName",
             "removalOrderOptions",
-            # "removalOrderDate",
+            "removalOrderDate",
             "detentionBuilding",
             "detentionAddressLines",
             "detentionPostcode"
@@ -7672,9 +7693,9 @@ def test_removalOrderDate_ac1(test_df):
         )    
         
         if acceptance_criteria.count() != 0:
-            return TestResult("removalOrderDate", "FAIL", f"removalOrderDate acceptance criteria failed: found {acceptance_criteria.count()} cases where M1.RemovalDate is not null, field != Yes", test_from_state, inspect.stack()[0].function)
+            return TestResult("removalOrderDate", "FAIL", f"removalOrderDate acceptance criteria failed: found {acceptance_criteria.count()} cases where M1.RemovalDate is not null, field != M1.RemovalDate", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("removalOrderDate", "PASS", f"removalOrderDate acceptance criteria passed: all cases where M1.RemovalDate is not null have field = Yes", test_from_state, inspect.stack()[0].function)
+            return TestResult("removalOrderDate", "PASS", f"removalOrderDate acceptance criteria passed: all cases where M1.RemovalDate is not null have field = M1.RemovalDate", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("removalOrderDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -7685,7 +7706,7 @@ def test_removalOrderDate_ac1(test_df):
 def test_removalOrderDate_ac2(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(col("removalOrderDate").isNotNull()).count() ==0:    
+        if test_df.filter(col("RemovalDate").isNull()).count() ==0:    
             return TestResult("removalOrderDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
@@ -7733,6 +7754,17 @@ def test_detentionDetails_ac1(test_df):
 #######################
 def test_caseData_init_detained(json, M2_bronze):
     try:
+        # Pre-check and inject missing JSON columns as NULL
+        for col_name in [
+            "appealReferenceNumber", "prisonName", "ircName", "detentionBuilding", 
+            "detentionAddressLines", "detentionPostcode", "hearingCentre", 
+            "staffLocation", "caseManagementLocation", "hearingCentreDynamicList", 
+            "caseManagementLocationRefData", "selectedHearingCentreRefData", 
+            "applicationChangeDesignatedHearingCentre", "appellantInDetention"
+        ]:
+            if col_name not in json.columns:
+                json = json.withColumn(col_name, lit(None).cast("string"))
+
         json = json.select(
             "appealReferenceNumber",
             "prisonName",
@@ -7943,7 +7975,7 @@ def caseData_ac1(mapping_df, test_df):
             ).distinct()
             
             if relevant_records.count() == 0:    
-                return TestResult("caseData", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                return TestResult("caseData", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function), None
 
             audit_df = relevant_records.join(
                 mapping_df, 

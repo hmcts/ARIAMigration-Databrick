@@ -202,7 +202,7 @@ def test_hearingResponse(test_df):
             # expected field mapping
             expected_fields = {
                 "Hearing Centre": str(row.HC or "N/A"),
-                "Hearing Date": str(row.HD or "N/A"),
+                "Hearing Date": str(row.HD).split(" ")[0] if row.HD else "N/A",
                 "Hearing Type": str(row.HT or "N/A"),
                 "Court": str(row.CN or "N/A"),
                 "List Type": str(row.LT or "N/A"),

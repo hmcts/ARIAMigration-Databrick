@@ -21,10 +21,10 @@ parameters:
         pool_name: 'hmcts-sds-ptl'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
         states: ['active_ccd', 'active_caselink_ccd', 'active_cdam'] # Active Function State
-        landing_zones: 
+        landing_zones:
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
-            databricks_token: "$(DATABRICKS_PAT_SBOX00)" 
+            databricks_token: "$(DATABRICKS_PAT_SBOX00)"
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest00landingsbox'
@@ -33,7 +33,7 @@ parameters:
             Key_vault_Name: 'ingest00-meta002-sbox'
           # - landing_zone: '01'
           #   databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
-          #   databricks_token: "$(DATABRICKS_PAT_SBOX01)" 
+          #   databricks_token: "$(DATABRICKS_PAT_SBOX01)"
           #   Client_ID: $(SBOX_CLIENT_ID)
           #   Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
           #   HTML_StorageAccount: 'ingest01landingsbox'
@@ -75,7 +75,7 @@ parameters:
       #   pool_name: 'hmcts-sds-ptl'
       #   segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
       #   states: ['active_ccd'] # Active Function State
-      #   landing_zones: 
+      #   landing_zones:
       #     - landing_zone: '00'
       #       databricks_host:
       #       databricks_token:
@@ -87,13 +87,13 @@ parameters:
       #       Key_vault_Name: 'ingest00-meta002-prod'
 
 stages:
-  - stage: Init 
+  - stage: Init
     displayName: 'No dependency stage'
     jobs:
       - job: BuildJob
-        displayName: 'Build Job' 
+        displayName: 'Build Job'
         steps:
-          - script: echo 'Initial stage set-up' 
+          - script: echo 'Initial stage set-up'
             displayName: 'Initial stage set-up'
 
   - ${{ each deployment in parameters.environment_components }}:
@@ -454,6 +454,11 @@ stages:
                     databricks fs mkdirs dbfs:/FileStore/packages
                     databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
                     databricks fs ls dbfs:/FileStore/packages
+                    echo "Legacy DBFS wheel uploaded"
+                    UC_DEST_PATH="/Volumes/aria_${{ deployment.environment }}${{ lz.landing_zone }}/ariadm_active_appeals/packages/$FILENAME"
+                    databricks fs cp "$WHEEL_FILE" "$UC_DEST_PATH" --overwrite --debug
+                    databricks fs ls "$UC_DEST_PATH"
+                    echo "UC wheel uploaded"
                   else
                     echo "No wheel file found"
                     exit 1

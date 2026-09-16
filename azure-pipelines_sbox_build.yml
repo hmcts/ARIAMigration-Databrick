@@ -464,12 +464,13 @@ stages:
               - script: |
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   cd ARIA_DABs
-                  ${{ if eq(parameters.delete_bundle, true) }}:
+                  if [[ "${{ lower(parameters.delete_bundle) }}" == "true" ]]; then
                     # Destroy the bundle only if there are errors deploying. This will remove run history.
                     echo "Deleting existing resources"
                     databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }} --auto-approve
-                  ${{ else }}:
+                  else
                     echo "Skipping deletion of resources"
+                  fi
                   echo "Validating new resources"
                   databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
                   echo "Deploying new resources"

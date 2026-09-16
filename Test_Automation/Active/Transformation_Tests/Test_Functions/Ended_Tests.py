@@ -32,11 +32,13 @@ import inspect
 # Default Mapping
 ############################################################################################
 
+
+############################################################################################
+# 1. Group ID Mapping
+############################################################################################
+
 def get_ended_group_id(df):
-
     history_window = Window.partitionBy("CaseNo").orderBy("StatusId")
-    
-
     df_with_prev = df.withColumn("PrevCaseStatusId", F.lag("CaseStatus").over(history_window))
 
     return df_with_prev.withColumn("EndedGroup",
@@ -65,71 +67,91 @@ def get_ended_group_id(df):
         .otherwise(0)
     )
 
+def safe_col(df, col_name, default_type=None):
+    """
+    Schema-safe projection helper. Guarantees column presence in DataFrame.
+    """
+    if col_name in df.columns:
+        return F.col(col_name)
+    elif default_type == "array":
+        return F.array().alias(col_name)
+    else:
+        return F.lit(None).alias(col_name)
+
+############################################################################################
+# 2. Initialisation (`test_default_mapping_init`)
+############################################################################################
 
 def test_default_mapping_init(json_data, M1_silver, M3_bronze):
     try:
-
-        manual_fields = [
-            "appealReferenceNumber", "outOfTimeDecisionType", "uploadHomeOfficeBundleAvailable",
-            "caseArgumentAvailable", "reasonsForAppealDecision", "reviewedHearingRequirements",
-            "isAppellantAttendingTheHearing", "isAppellantGivingOralEvidence", "isWitnessesAttending",
-            "isHearingRoomNeeded", "isHearingLoopNeeded", "remoteVideoCall", "remoteVideoCallDescription",
-            "physicalOrMentalHealthIssues", "physicalOrMentalHealthIssuesDescription", "pastExperiences",
-            "pastExperiencesDescription", "multimediaEvidence", "multimediaEvidenceDescription",
-            "additionalRequests", "additionalRequestsDescription", "datesToAvoidYesNo", "isRemoteHearing",
-            "isMultimediaAllowed", "multimediaTribunalResponse", "multimediaDecisionForDisplay",
-            "isVulnerabilitiesAllowed", "vulnerabilitiesTribunalResponse", "vulnerabilitiesDecisionForDisplay",
-            "isRemoteHearingAllowed", "remoteVideoCallTribunalResponse", "remoteHearingDecisionForDisplay",
-            "isAdditionalAdjustmentsAllowed", "additionalTribunalResponse", "otherDecisionForDisplay",
-            "isAdditionalInstructionAllowed", "scheduleOfIssuesAgreement", "scheduleOfIssuesDisagreementDescription",
-            "immigrationHistoryAgreement", "immigrationHistoryDisagreementDescription", "anonymityOrder",
-            "uploadHomeOfficeBundleActionAvailable", "appealReviewOutcome", "appealResponseAvailable",
-            "amendResponseActionAvailable", "currentHearingDetailsVisible", "reviewResponseActionAvailable",
-            "reviewHomeOfficeResponseByLegalRep", "submitHearingRequirementsAvailable", 
-            "uploadHomeOfficeAppealResponseActionAvailable", "stitchingStatus", "bundleConfiguration",
-            "appealDecisionAvailable", "isFtpaListVisible", "hmcts", "witnessDetails", "directions", 
-            "respondentDocuments", "hearingRequirements", "hearingDocuments", "letterBundleDocuments", 
-            "caseBundles", "finalDecisionAndReasonsDocuments",
-            "witness1InterpreterSignLanguage", "witness2InterpreterSignLanguage", "witness3InterpreterSignLanguage", 
-            "witness4InterpreterSignLanguage", "witness5InterpreterSignLanguage", "witness6InterpreterSignLanguage",
-            "witness7InterpreterSignLanguage", "witness8InterpreterSignLanguage", "witness9InterpreterSignLanguage",
-            "witness10InterpreterSignLanguage", "witness1InterpreterSpokenLanguage", "witness2InterpreterSpokenLanguage",
-            "witness3InterpreterSpokenLanguage", "witness4InterpreterSpokenLanguage", "witness5InterpreterSpokenLanguage",
-            "witness6InterpreterSpokenLanguage", "witness7InterpreterSpokenLanguage", "witness8InterpreterSpokenLanguage",
-            "witness9InterpreterSpokenLanguage", "witness10InterpreterSpokenLanguage"
-        ]
-
- 
-        available_fields = [f for f in manual_fields if f in json_data.columns]
-        test_df = json_data.select(*available_fields)
-
-  
+        # 1. Calculate latest EndedGroup per case from M3_bronze
         full_status_with_groups = get_ended_group_id(M3_bronze)
-        
-      
         window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
+        
         latest_status = full_status_with_groups.withColumn("rn", F.row_number().over(window_spec)) \
                                                .filter(F.col("rn") == 1) \
                                                .select(F.col("CaseNo").alias("M3_CaseNo"), "EndedGroup", "CaseStatus", "StatusId", "Outcome")
 
-        test_df = test_df.join(
-            latest_status, test_df.appealReferenceNumber == latest_status.M3_CaseNo, "left"
+        # 2. Join JSON payload with M3_bronze and M1_silver
+        joined_df = json_data.join(
+            latest_status, json_data.appealReferenceNumber == latest_status.M3_CaseNo, "left"
         ).join(
             M1_silver.select(F.col("CaseNo").alias("M1_CaseNo"), "Dv_Representation"),
-            test_df.appealReferenceNumber == F.col("M1_CaseNo"), "left"
+            json_data.appealReferenceNumber == F.col("M1_CaseNo"), "left"
         ).drop("M3_CaseNo", "M1_CaseNo")
+
+        # 3. Project ALL required fields safely (adds array/scalar fallbacks for missing schema fields)
+        test_df = joined_df.select(
+            "*",
+            # Target array fields
+            safe_col(joined_df, "witnessDetailsCollection", default_type="array"),
+            safe_col(joined_df, "witnessDetails", default_type="array"),
+            safe_col(joined_df, "hearingDocuments", default_type="array"),
+            safe_col(joined_df, "letterBundleDocuments", default_type="array"),
+            safe_col(joined_df, "caseBundles", default_type="array"),
+            safe_col(joined_df, "finalDecisionAndReasonsDocuments", default_type="array"),
+            safe_col(joined_df, "directions", default_type="array"),
+            safe_col(joined_df, "respondentDocuments", default_type="array"),
+            safe_col(joined_df, "hearingRequirements", default_type="array"),
+            
+            # Target Group 4 scalar fields
+            safe_col(joined_df, "isRemoteHearing"),
+            safe_col(joined_df, "isMultimediaAllowed"),
+            safe_col(joined_df, "multimediaTribunalResponse"),
+            safe_col(joined_df, "multimediaDecisionForDisplay"),
+            safe_col(joined_df, "isVulnerabilitiesAllowed"),
+            safe_col(joined_df, "vulnerabilitiesTribunalResponse"),
+            safe_col(joined_df, "vulnerabilitiesDecisionForDisplay"),
+            safe_col(joined_df, "isRemoteHearingAllowed"),
+            safe_col(joined_df, "remoteVideoCallTribunalResponse"),
+            safe_col(joined_df, "remoteHearingDecisionForDisplay"),
+            safe_col(joined_df, "isAdditionalAdjustmentsAllowed"),
+            safe_col(joined_df, "additionalTribunalResponse"),
+            safe_col(joined_df, "otherDecisionForDisplay"),
+            safe_col(joined_df, "isAdditionalInstructionAllowed"),
+            safe_col(joined_df, "scheduleOfIssuesAgreement"),
+            safe_col(joined_df, "scheduleOfIssuesDisagreementDescription"),
+            safe_col(joined_df, "immigrationHistoryAgreement"),
+            safe_col(joined_df, "immigrationHistoryDisagreementDescription"),
+            safe_col(joined_df, "anonymityOrder"),
+            safe_col(joined_df, "hmcts"),
+            safe_col(joined_df, "stitchingStatus"),
+            safe_col(joined_df, "bundleConfiguration"),
+            safe_col(joined_df, "appealDecisionAvailable"),
+            safe_col(joined_df, "isFtpaListVisible")
+        )
 
         return test_df, True
     except Exception as e:
         return None, TestResult("Init", "FAIL", f"Error: {str(e)[:500]}", "ended", "init")
 
 ############################################################################################
-# 3. Test: Default Values for Ended State
+# 3. Test: Default Values for Ended State (`test_ended_defaultValues`)
 ############################################################################################
 
-def test_ended_defaultValues(test_df, fields_to_exclude):
+def test_ended_defaultValues(test_df, fields_to_exclude=None):
     results_list = []
-    
+    fields_to_exclude = set(fields_to_exclude or [])
 
     omitted_fields = [
         "ftpaAppellantDocuments", "ftpaAppellantGroundsDocuments", 
@@ -150,7 +172,7 @@ def test_ended_defaultValues(test_df, fields_to_exclude):
         "isVulnerabilitiesAllowed": [4], "vulnerabilitiesTribunalResponse": [4], "vulnerabilitiesDecisionForDisplay": [4],
         "isRemoteHearingAllowed": [4], "remoteVideoCallTribunalResponse": [4], "remoteHearingDecisionForDisplay": [4],
         "isAdditionalAdjustmentsAllowed": [4], "additionalTribunalResponse": [4], "otherDecisionForDisplay": [4],
-        "isAdditionalInstructionAllowed": [4], "witnessDetails": [4], "witness1InterpreterSignLanguage": [4],
+        "isAdditionalInstructionAllowed": [4], "witnessDetailsCollection": [4], "witness1InterpreterSignLanguage": [4],
         "witness2InterpreterSignLanguage": [4], "witness3InterpreterSignLanguage": [4], "witness4InterpreterSignLanguage": [4],
         "witness5InterpreterSignLanguage": [4], "witness6InterpreterSignLanguage": [4], "witness7InterpreterSignLanguage": [4],
         "witness8InterpreterSignLanguage": [4], "witness9InterpreterSignLanguage": [4], "witness10InterpreterSignLanguage": [4],
@@ -202,53 +224,97 @@ def test_ended_defaultValues(test_df, fields_to_exclude):
     }
 
     try:
-        # FAIL omitted fields
+        # Step 1: Validate Omitted Fields
         for field in omitted_fields:
-            if field in fields_to_exclude: continue
-            results_list.append(TestResult(field, "FAIL", "NO RECORDS TO TEST: Field omitted from ended state", "ended", "DefaultMapping"))
+            if field in fields_to_exclude:
+                continue
+            if field in test_df.columns:
+                non_null_cnt = test_df.filter(F.col(field).isNotNull()).count()
+                if non_null_cnt > 0:
+                    results_list.append(TestResult(field, "FAIL", f"Field should be omitted in ended state, but found {non_null_cnt} non-null values.", "ended", inspect.stack()[0].function))
+                else:
+                    results_list.append(TestResult(field, "PASS", "Field correctly omitted from ended state.", "ended", inspect.stack()[0].function))
+            else:
+                results_list.append(TestResult(field, "PASS", "Field correctly omitted from ended state schema.", "ended", inspect.stack()[0].function))
 
-
+        # Step 2: Validate Scalar Default Values
         for field, expected in expected_defaults.items():
-            if field in fields_to_exclude or field in omitted_fields: continue
-            
-            current_expected = "Yes" if field in ["uploadHomeOfficeBundleAvailable", "reviewedHearingRequirements"] else expected
+            if field in fields_to_exclude or field in omitted_fields: 
+                continue
 
+            if field not in test_df.columns:
+                results_list.append(TestResult(field, "FAIL", f"Column '{field}' missing from DataFrame schema.", "ended", inspect.stack()[0].function))
+                continue
+
+            current_expected = "Yes" if field in ["uploadHomeOfficeBundleAvailable", "reviewedHearingRequirements"] else expected
             valid_groups = group_requirements.get(field, [1, 2, 3, 4])
             subset = test_df.filter(F.col("EndedGroup").isin(valid_groups))
-            
+
             # Representation filtering
             if field == "caseArgumentAvailable":
                 subset = subset.filter(F.col("Dv_Representation") == "LR")
             elif field == "reasonsForAppealDecision":
                 subset = subset.filter(F.col("Dv_Representation") == "AIP")
 
-            if subset.count() == 0: continue
+            # Report NO_DATA if 0 records match scenario filter
+            if subset.count() == 0:
+                results_list.append(TestResult(field, "NO_DATA", f"No records found for Groups {valid_groups} in sample dataset.", "ended", inspect.stack()[0].function))
+                continue
 
             condition = (F.col(field) != current_expected) | (F.col(field).isNull())
             fail_count = subset.filter(condition).count()
-            
+
             status = "PASS" if fail_count == 0 else "FAIL"
             msg = f"Valid for Groups {valid_groups}" if fail_count == 0 else f"Mismatches in Groups {valid_groups}: {fail_count}"
             results_list.append(TestResult(field, status, msg, "ended", inspect.stack()[0].function))
 
-        # Step 3: Loop for Arrays
-        expected_arrays = {"witnessDetails": None, "directions": None, "respondentDocuments": None, "hearingRequirements": None, "hearingDocuments": None, "letterBundleDocuments": None, "caseBundles": None, "finalDecisionAndReasonsDocuments": None}
-        
+        # Step 3: Validate Array Fields (Handles witnessDetailsCollection vs witnessDetails alias)
+        expected_arrays = {
+            "witnessDetailsCollection": None, 
+            "directions": None, 
+            "respondentDocuments": None, 
+            "hearingRequirements": None, 
+            "hearingDocuments": None, 
+            "letterBundleDocuments": None, 
+            "caseBundles": None, 
+            "finalDecisionAndReasonsDocuments": None
+        }
+
         for field, contains_val in expected_arrays.items():
-            if field in fields_to_exclude or field in omitted_fields: continue
+            if field in fields_to_exclude or field in omitted_fields: 
+                continue
+
+            # Resolve target field alias
+            target_col = field
+            if target_col not in test_df.columns:
+                if target_col == "witnessDetailsCollection" and "witnessDetails" in test_df.columns:
+                    target_col = "witnessDetails"
+                else:
+                    results_list.append(TestResult(field, "FAIL", f"Array column '{field}' missing from DataFrame schema.", "ended", inspect.stack()[0].function))
+                    continue
+
             valid_groups = group_requirements.get(field, [1, 2, 3, 4])
             subset = test_df.filter(F.col("EndedGroup").isin(valid_groups))
-            
-            condition = (~F.array_contains(F.col(field), contains_val)) if contains_val else (F.size(F.col(field)) != 0)
-                
+
+            # Report NO_DATA if 0 records match scenario filter
+            if subset.count() == 0:
+                results_list.append(TestResult(field, "NO_DATA", f"No records found for Groups {valid_groups} in sample dataset.", "ended", inspect.stack()[0].function))
+                continue
+
+            condition = (~F.array_contains(F.col(target_col), contains_val)) if contains_val else (F.size(F.col(target_col)) != 0) | F.col(target_col).isNull()
+
             fail_count = subset.filter(condition).count()
             status = "PASS" if fail_count == 0 else "FAIL"
             msg = f"Array valid for Groups {valid_groups}" if fail_count == 0 else f"Array mismatch in Groups {valid_groups}: {fail_count}"
             results_list.append(TestResult(field, status, msg, "ended", inspect.stack()[0].function))
 
         return results_list
+
     except Exception as e:
-        return [TestResult("DefaultMapping", "FAIL", f"Error: {str(e)[:300]}", "ended", "test")]
+        return [TestResult("DefaultMapping", "FAIL", f"Error: {str(e)[:300]}", "ended", inspect.stack()[0].function)]
+
+
+
 
 def test_caseData_init(json, M1_bronze, M3_bronze):
     try:

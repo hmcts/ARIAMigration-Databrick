@@ -467,7 +467,10 @@ stages:
               - script: |
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   cd ARIA_DABs
-                  databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
+                  echo "Removing existing resources"
+                  databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }} --auto-approve
+                  echo "Validating new resources"
                   databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+                  echo "Deploying new resources"
                   databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug --auto-approve
                 displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }}"

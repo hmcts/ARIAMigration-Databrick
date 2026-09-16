@@ -455,7 +455,7 @@ stages:
                     databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
                     databricks fs ls dbfs:/FileStore/packages
                     echo "Legacy DBFS wheel uploaded"
-                    UC_DEST_PATH="/Volumes/aria_${{ deployment.environment }}${{ lz.landing_zone }}/ariadm_active_appeals/packages/$FILENAME"
+                    UC_DEST_PATH="dbfs:/Volumes/aria_${{ deployment.environment }}${{ lz.landing_zone }}/ariadm_active_appeals/packages/$FILENAME"
                     databricks fs cp "$WHEEL_FILE" "$UC_DEST_PATH" --overwrite --debug
                     databricks fs ls "$UC_DEST_PATH"
                     echo "UC wheel uploaded"

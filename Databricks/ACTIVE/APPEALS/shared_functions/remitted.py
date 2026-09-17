@@ -13,11 +13,24 @@ from . import ftpa_submitted_a as FSA
 from . import ftpa_decided as FD
 
 from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list, 
+    col, when, lit, array, struct, collect_list,
     max as spark_max, date_format, date_add, row_number, expr, regexp_replace,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
 )
+
+################################################################
+##########              ftpa (Field Group)          ###########
+################################################################
+
+
+def ftpa(silver_m1, silver_m2, silver_m3, silver_c):
+    ftpa_df, ftpa_audit = FD.ftpa(silver_m1, silver_m2, silver_m3, silver_c)
+
+    ftpa_df = ftpa_df.withColumn("ftpaFinalDecisionForDisplay", lit("undecided"))
+
+    return ftpa_df, ftpa_audit
+
 
 ################################################################
 ##########              remittal                     ###########
@@ -46,7 +59,7 @@ def remittal(silver_m1,silver_m3):
         silver_m1.join(silver_m3_max_statusid,on="CaseNo",how="left")
         .withColumn("rehearingReason", lit("Remitted"))
         .withColumn("sourceOfRemittal", lit("Upper Tribunal"))
-        .withColumn("appealRemittedDate", date_format(col("DecisionDate"), "yyyy-MM-dd")) 
+        .withColumn("appealRemittedDate", date_format(col("DecisionDate"), "yyyy-MM-dd"))
         .withColumn("courtReferenceNumber", lit("This is a migrated ARIA case. Please refer to the documents."))
         .select(
             col("CaseNo"),
@@ -98,7 +111,7 @@ def remittal(silver_m1,silver_m3):
 ##########              documents          ###########
 ################################################################
 
-def documents(silver_m1, silver_m3): 
+def documents(silver_m1, silver_m3):
     documents_df, documents_audit = FD.documents(silver_m1, silver_m3)
 
     documents_df = (
@@ -187,7 +200,7 @@ def generalDefault(silver_m1):
     return general_df
 ################################################################
 
-################################################################   
+################################################################
 
 if __name__ == "__main__":
     pass

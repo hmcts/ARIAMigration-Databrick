@@ -4,9 +4,17 @@ from .dq_rules import DQRulesBase
 class remittedDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
+        checks = checks | self.get_checks_ftpa()
         checks = checks | self.get_checks_remitted()
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_general_default()
+
+        return checks
+
+    def get_checks_ftpa(self, checks={}):
+        checks["valid_ftpaFinalDecisionForDisplay"] = ("""
+            ftpaFinalDecisionForDisplay = "undecided"
+        """)
 
         return checks
 
@@ -79,7 +87,7 @@ class remittedDQRules(DQRulesBase):
         return checks
 
     def get_checks_document(self, checks={}):
-        
+
         checks["valid_remittalDocuments"] = ("(COALESCE(size(remittalDocuments), 0) = 0) ")
         checks["valid_uploadOtherRemittalDocs"] = ("(COALESCE(size(uploadOtherRemittalDocs), 0) = 0) ")
         return checks
@@ -89,10 +97,9 @@ class remittedDQRules(DQRulesBase):
 
         checks["valid_caseFlagSetAsideReheardExists"] = (
             """
-                (caseFlagSetAsideReheardExists = 'Yes') 
+                (caseFlagSetAsideReheardExists = 'Yes')
                 AND caseFlagSetAsideReheardExists IS NOT NULL
                 AND caseFlagSetAsideReheardExists != ""
             """)
 
         return checks
-

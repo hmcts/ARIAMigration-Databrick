@@ -109,7 +109,7 @@ stages:
               - task: ManualValidation@1
                 timeoutInMinutes: 23160
                 inputs:
-                  approvers: andrew.mcdevitt@hmcts.net, tony.chow@hmcts.net, Misbah.Ul-Islam@HMCTS.NET
+                  approvers: andrew.mcdevitt@hmcts.net, tony.chow@hmcts.net
                   instructions: Please validate the build configuration and resume
 
   - ${{ each deployment in parameters.environment_components }}:
@@ -167,7 +167,7 @@ stages:
                 - task: ManualValidation@1
                   timeoutInMinutes: 23160
                   inputs:
-                    approvers: andrew.mcdevitt@hmcts.net, tony.chow@hmcts.net, Misbah.Ul-Islam@HMCTS.NET
+                    approvers: andrew.mcdevitt@hmcts.net, tony.chow@hmcts.net
                     instructions: 'Approve deployment to ${{ deployment.environment }} LZ${{ lz.landing_zone }} (${{ lz.databricks_host }})'
 
   - ${{ each deployment in parameters.environment_components }}:

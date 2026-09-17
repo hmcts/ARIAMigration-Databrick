@@ -2129,7 +2129,7 @@ def bronze_case_adjudicator():
 
 # COMMAND ----------
 
-stg_appeals_filtered = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states")
+stg_appeals_filtered = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states")
 
 # COMMAND ----------
 
@@ -2149,7 +2149,7 @@ stg_appeals_filtered = spark.read.table("hive_metastore.ariadm_active_appeals.st
     comment="Delta Live silver Table for Appeals case details.")
 def silver_appealcase_detail():
     appeals_df = dp.read("bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang").alias("ap")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("ap.CaseNo") == col("flt.CaseNo"), "inner").select(
         "ap.CaseNo",
@@ -2315,7 +2315,7 @@ def silver_appealcase_detail():
     comment="Delta Live silver Table for casenapplicant detail.")
 def silver_applicant_detail():
     appeals_df = dp.read("bronze_appealcase_ca_apt_country_detc").alias("ca")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").filter(col("ca.CaseAppellantRelationship").isNull()).select(
         "ca.AppellantId",
@@ -2379,7 +2379,7 @@ def silver_applicant_detail():
     comment="Delta Live silver Table for casenapplicant detail.")
 def silver_dependent_detail():
     appeals_df = dp.read("bronze_appealcase_ca_apt_country_detc").alias("ca")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").filter(col("ca.CaseAppellantRelationship").isNotNull()).select(
         "ca.AppellantId",
@@ -2439,7 +2439,7 @@ def silver_dependent_detail():
     comment="Delta Live silver Table for list detail.")
 def silver_list_detail():
     appeals_df = dp.read("bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj").alias("ca")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     adjudicator_details = (
         appeals_df
@@ -2609,7 +2609,7 @@ def silver_list_detail():
     comment="Delta Live silver Table for dfdairy detail.")
 def silver_dfdairy_detail():
     appeals_df = dp.read("bronze_appealcase_bfdiary_bftype").alias("df")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("df.CaseNo") == col("flt.CaseNo"), "inner").select("df.*")
 
@@ -2631,7 +2631,7 @@ def silver_dfdairy_detail():
     comment="Delta Live silver Table for history detail.")
 def silver_history_detail():
     appeals_df = dp.read("bronze_appealcase_history_users").alias("hu")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     # Select only one row for fileLocation (latest for HistType = 6)
     file_location_df = appeals_df.filter((col("HistType") == 6))\
@@ -2767,7 +2767,7 @@ def silver_status_detail():
     from pyspark.sql.functions import row_number
 
     appeals_df = dp.read("bronze_appealcase_status_sc_ra_cs").alias("st")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     window = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
     status_ranked = appeals_df.withColumn("rn", row_number().over(window))
@@ -2980,7 +2980,7 @@ def silver_status_detail():
     comment="Delta Live silver Table for status detail.")
 def silver_appealcategory_detail():
     appeals_df = dp.read("bronze_appealcase_appealcatagory_catagory").alias("ac")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("ac.CaseNo") == col("flt.CaseNo"), "inner").select("ac.*")
 
@@ -2999,7 +2999,7 @@ def silver_appealcategory_detail():
     comment="Delta Live silver Table for case detail.")
 def silver_case_detail():
     case_df = dp.read("bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at").alias("case")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = case_df.join(flt_df, col("case.CaseNo") == col("flt.CaseNo"), "inner").select(
         col("case.CaseNo").alias("CaseNo"),
@@ -3125,7 +3125,7 @@ def silver_case_detail():
     comment="Delta Live silver Table for transaction detail.")
 def silver_statusdecisiontype_detail():
     status_decision_df = dp.read("bronze_status_decisiontype").alias("status")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = status_decision_df.join(flt_df, col("status.CaseNo") == col("flt.CaseNo"), "inner").select("status.*")
 
@@ -3144,7 +3144,7 @@ def silver_statusdecisiontype_detail():
     comment="Delta Live silver Table for transaction detail.")
 def silver_transaction_detail():
     status_decision_df = dp.read("bronze_appealcase_t_tt_ts_tm").alias("tran")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias("flt")
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias("flt")
 
     referring_ids_df = broadcast(
     status_decision_df.filter(col("TransactionTypeId").isin(6, 19))
@@ -3258,7 +3258,7 @@ def silver_transaction_detail():
     comment="Delta Live silver Table for human rights detail.")
 def silver_humanright_detail():
     humanright_df = dp.read("bronze_appealcase_ahr_hr").alias("hr")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = humanright_df.join(flt_df, col("hr.CaseNo") == col("flt.CaseNo"), "inner").select("hr.*")
 
@@ -3277,7 +3277,7 @@ def silver_humanright_detail():
     comment="Delta Live silver Table for new matter detail.")
 def silver_newmatter_detail():
     newmatter_df = dp.read("bronze_appealcase_anm_nm").alias("nm")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = newmatter_df.join(flt_df, col("nm.CaseNo") == col("flt.CaseNo"), "inner").select(
         "nm.AppealNewMatterId",
@@ -3307,7 +3307,7 @@ def silver_newmatter_detail():
     comment="Delta Live silver Table for documents detail.")
 def silver_documents_detail():
     documents_df = dp.read("bronze_appealcase_dr_rd").alias("doc")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     cols = [c for c in documents_df.columns if c != "DoNotUse" and c != "DateReceived"]
     joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "inner") \
@@ -3341,7 +3341,7 @@ def silver_documents_detail():
     comment="Delta Live silver Table for direction details.")
 def sliver_direction_detail():
     direction_df = dp.read("bronze_appealcase_rsd_sd").alias("dir")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = direction_df.join(flt_df, col("dir.CaseNo") == col("flt.CaseNo"), "inner").select("dir.*")
 
@@ -3360,7 +3360,7 @@ def sliver_direction_detail():
     comment="Delta Live silver Table for review-specific direction details.")
 def Silver_reviewspecificdirection_detail():
     review_specific_direction_df = dp.read("bronze_review_specific_direction").alias("rsd")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = review_specific_direction_df.join(flt_df, col("rsd.CaseNo") == col("flt.CaseNo"), "inner").select("rsd.*")
 
@@ -3380,7 +3380,7 @@ def Silver_reviewspecificdirection_detail():
     comment="Delta Live silver Table for cost award detail.")
 def silver_linkedcostaward_detail():
     costaward_df = dp.read("bronze_cost_award_linked").alias("ca")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = costaward_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").select(
         "ca.CostAwardId",
@@ -3431,7 +3431,7 @@ def silver_linkedcostaward_detail():
     comment="Delta Live silver Table for cost award detail.")
 def silver_costaward_detail():
     costaward_df = dp.read("bronze_cost_award").alias("ca")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = costaward_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").select(
         "ca.CostAwardId",
@@ -3485,7 +3485,7 @@ def silver_costaward_detail():
     comment="Delta Live silver Table for cost order detail.")
 def silver_costorder_detail():
     costorder_df = dp.read("bronze_costorder").alias("co")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
 
 
@@ -3542,7 +3542,7 @@ def silver_costorder_detail():
     comment="Delta Live silver Table for hearing points change reason detail.")
 def silver_hearingpointschange_detail():
     hearingpointschange_df = dp.read("bronze_hearing_points_change_reason").alias("hpc")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = hearingpointschange_df.join(flt_df, col("hpc.CaseNo") == col("flt.CaseNo"), "inner").select(
         "hpc.CaseNo",
@@ -3566,7 +3566,7 @@ def silver_hearingpointschange_detail():
     comment="Delta Live silver Table for hearing points history detail.")
 def silver_hearingpointshistory_detail():
     hearingpointshistory_df = dp.read("bronze_hearing_points_history").alias("hph")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = hearingpointshistory_df.join(flt_df, col("hph.CaseNo") == col("flt.CaseNo"), "inner").select("hph.*")
 
@@ -3585,7 +3585,7 @@ def silver_hearingpointshistory_detail():
     comment="Delta Live silver Table for appeal type category detail.")
 def silver_appealtypecategory_detail():
     appealtypecategory_df = dp.read("bronze_appeal_type_category").alias("atc")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appealtypecategory_df.join(flt_df, col("atc.CaseNo") == col("flt.CaseNo"), "inner").select("atc.*")
 
@@ -3604,7 +3604,7 @@ def silver_appealtypecategory_detail():
     comment="Delta Live silver Table for appeal ground  detail.")
 def silver_appealgrounds_detail():
     appealtypecategory_df = dp.read("bronze_appeal_grounds").alias("agt")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appealtypecategory_df.join(flt_df, col("agt.CaseNo") == col("flt.CaseNo"), "inner").select("agt.*")
 
@@ -3623,7 +3623,7 @@ def silver_appealgrounds_detail():
     comment="Delta Live silver Table for appeal ground  detail.")
 def silver_required_incompatible_adjudicator():
     appealtypecategory_df = dp.read("bronze_required_incompatible_adjudicator").alias("adj")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appealtypecategory_df.join(flt_df, col("adj.CaseNo") == col("flt.CaseNo"), "inner").select("adj.*")
 
@@ -3641,7 +3641,7 @@ def silver_required_incompatible_adjudicator():
     comment="Delta Live silver Table for appeal ground  detail.")
 def silver_case_adjudicator():
     appealtypecategory_df = dp.read("bronze_case_adjudicator").alias("adj")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = appealtypecategory_df.join(flt_df, col("adj.CaseNo") == col("flt.CaseNo"), "inner").select("adj.*")
 

@@ -544,17 +544,22 @@ def test_ftpaApplicationDeadline_init(json, M3_bronze, C):
 def test_ftpaApplicationDeadline_combined(test_df):
     try:
         test_df = test_df.filter(
-            (col("CaseStatus").isin(37, 38, 26)) & 
-            (col("Outcome").isin(1,2)) &
-            (col("appealOutOfCountry").isin("Yes", "No"))
+            (col("CaseStatus").isin(37, 38, 26)) &
+            (col("Outcome").isin(1,2))
         )
 
         #Check we have Records To test
         if test_df.count() == 0:
             return TestResult("ftpaApplicationDeadline", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
+        # per-case appeal category (37 in-country / 38 OOC), independent of the max-StatusId row
+        test_df = test_df.withColumn(
+            "appeal_cat",
+            F.max(F.when(col("CategoryId").isin(37, 38), col("CategoryId"))).over(Window.partitionBy("appealReferenceNumber"))
+        )
+
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
-        
+
         winning_df = test_df.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
 
         winning_df = winning_df.withColumn(
@@ -564,8 +569,8 @@ def test_ftpaApplicationDeadline_combined(test_df):
         )
 
         acceptance_criteria = winning_df.filter(
-            (F.when(col("appealOutOfCountry") == "No", F.to_date("ftpaApplicationDeadline") != col("expected_14"))
-             .when(col("appealOutOfCountry") == "Yes", F.to_date("ftpaApplicationDeadline") != col("expected_28"))
+            (F.when(col("appeal_cat") == 37, F.to_date("ftpaApplicationDeadline") != col("expected_14"))
+             .when(col("appeal_cat") == 38, F.to_date("ftpaApplicationDeadline") != col("expected_28"))
              .otherwise(lit(False)))
         )
 

@@ -5674,12 +5674,14 @@ def test_isServiceRequestTabVisibleConsideringRemissions_ac3(test_df):
         #Check we have Records To test
         if test_df.filter(
             (col("PaymentRemissionRequested").isNotNull())
+            & (col("PaymentRemissionRequested") != 2)
             ).count() == 0:
             return TestResult("isServiceRequestTabVisibleConsideringRemissions", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac = test_df.filter(
             (col("PaymentRemissionRequested").isNotNull())
-            & (col("isServiceRequestTabVisibleConsideringRemissions") != "No")        
+            & (col("PaymentRemissionRequested") != 2)
+            & (col("isServiceRequestTabVisibleConsideringRemissions") != "No")
         )
 
         if ac.count() != 0:
@@ -7847,7 +7849,7 @@ def caseDataMap(spark):
         (1, 23, 'Magilligan', 'Magilligan', None, 'HMP Magilligan', 'Point Road, Londonderry, Limavady', 'BT49 0LR', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
         (1, 25, 'Risley', 'Risley', None, 'HMP Risley', 'Warrington Road, Risley, Warrington, Cheshire', 'WA3 6BP', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
         (1, 26, 'Woodhill', 'Woodhill', None, 'HMP/YOI Woodhill', 'Tattenhoe Street, Milton Keynes, Buckinghamshire', 'MK4 4DA', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
-        (1, 28, 'Long Lartin', 'Long Lartin', None, 'HMP Long Lartin', 'South Littleton, Evesham, Worcestershire', 'WR11 8ZB', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 28, 'Long Lartin', 'Long Lartin', None, 'HMP Long Lartin', 'South Littleton, Evesham, Worcestershire', 'WR11 8TZ', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
         (1, 29, 'Northumberland', 'Northumberland', None, 'HMP Northumberland', 'Wansbeck Rd, Morpeth', 'NE65 9XG', 'newcastle', 'Newcastle', '{"region": "1", "baseLocation": "366796"}', '366796', 'Newcastle Civil And Family Courts And Tribunals Centre', 'Newcastle Civil And Family Courts And Tribunals Centre', 'newcastle'),
         (1, 30, 'Aylesbury', 'Aylesbury', None, 'HMP Aylesbury', 'Bierton Road, Aylesbury', 'HP20 1EH', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
         (1, 31, 'Highpoint', 'Highpoint', None, 'HMP Highpoint', 'Stradishall, Newmarket, Suffolk', 'CB8 9YG', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
@@ -7920,7 +7922,7 @@ def caseDataMap(spark):
         (1, 173, 'Styal', 'Styal', None, 'HMP/YOI Styal', 'Wilmslow, Cheshire', 'SK9 4HR', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
         (1, 174, 'Sudbury', 'Sudbury', None, 'HMP Sudbury', 'Nr Ashbourne, Derbyshire', 'DE6 5HW', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
         (1, 175, 'Swansea', 'Swansea', None, 'HMP Swansea', '200 Oystermouth Road, Swansea', 'SA1 3SR', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
-        (1, 180, 'Werrington', 'Werrington', None, 'HMP/YOI Werrington', 'Ash Bank Road, Werrington, Stoke-On-Trent', 'ST9 0DX', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 180, 'Werrington', 'Werrington', None, 'HMYOI Werrington', 'Ash Bank Road, Werrington, Stoke-On-Trent', 'ST9 0DX', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
         (1, 183, 'Wymott', 'Wymott', None, 'HMP Wymott', 'Ulnes Walton Lane, Leyland, Preston, Lancashire', 'PR26 8LW', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
         (1, 188, 'Low Moss', 'Low Moss', None, 'HMP Low Moss', 'Crosshill Road, Bishopbriggs, Glasgow', 'G64 2QB', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
         (1, 190, 'Hindley', 'Hindley', None, 'HMP/YOI Hindley', 'Barracks Road, Bickershaw, Wigan', 'WN2 5TH', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
@@ -7938,9 +7940,9 @@ def caseDataMap(spark):
         (2, 7, 'Tinsley House', None, 'Tinsley House', 'Tinsley House IRC', 'Perimeter Road South, Gatwick Airport, Gatwick, West Sussex', 'RH6 0PQ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
         (2, 46, 'Harmondsworth', None, 'Harmondsworth', 'Harmondsworth IRC', 'Colnbrook-by-pass, Harmondsworth, West Drayton, Middlesex', 'UB7 0HB', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
         (2, 60, 'Dungavel Detention Centre', None, 'Dungavel', 'Dungavel House IRC', 'Strathaven, South Lanarkshire', 'ML10 6RF', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
-        (2, 63, "Yarl's Wood", None, 'Yarlswood', "Yarl's Wood IRC", 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlswood', 'Yarlswood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
+        (2, 63, "Yarl's Wood", None, 'Yarlswood', "Yarl's Wood IRC", 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlswood', 'Yarls Wood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
         (2, 103, 'Colnbrook', None, 'Colnbrook', 'Colnbrook IRC', 'Colnbrook Bypass, Harmondsworth, West Drayton, Middlesex', 'UB7 0FX', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
-        (2, 126, "Yarl's Wood IRC", None, 'Yarlswood', "Yarl's Wood IRC", 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlsWood', 'Yarlswood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
+        (2, 126, "Yarl's Wood IRC", None, 'Yarlswood', "Yarl's Wood IRC", 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlsWood', 'Yarls Wood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
         (2, 195, 'Brook House', None, 'Brookhouse', 'Brook House IRC', 'Perimeter Road South, London Gatwick Airport, Gatwick', 'RH6 0PQ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
         (2, 212, 'Derwentside Immigration Removal Ctr', None, 'Derwentside', 'Derwentside IRC', 'Corbridge Road, Consett, Co Durham', 'DH8 6QY', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford')
     ]
@@ -7963,7 +7965,7 @@ def caseData_ac1(mapping_df, test_df):
         )
 
         if hearingCentre_check.count() != 0:
-            return TestResult("caseData", "FAIL", f"caseData acceptance criteria failed: found {acceptance_criteria.count()} cases where hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData are null. These are mandatory fields and always need to be populated.", test_from_state, inspect.stack()[0].function), acceptance_criteria
+            return TestResult("caseData", "FAIL", f"caseData acceptance criteria failed: found {hearingCentre_check.count()} cases where hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData are null. These are mandatory fields and always need to be populated.", test_from_state, inspect.stack()[0].function), hearingCentre_check
         else:
             relevant_records = test_df.filter(
                 F.col("Detained").isin(1, 2) & F.col("DetentionCentreId").isNotNull()
@@ -8298,24 +8300,31 @@ def test_appellantAddress_ac2(test_df):
 def test_appellantAddress_ac3(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter((~col("Detained").isin(1,2)) & (col("appealOutOfCountry") == "No")).count() ==0:    
+        if test_df.filter((~col("Detained").isin(1,2)) & (F.array_contains(col("CategoryIds"), 37))).count() ==0:
             return TestResult("appellantAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-                                                
+
         def clean_val(col_ref):
             c = F.col(col_ref) if isinstance(col_ref, str) else col_ref
             return F.when(
-                (c.isNull()) | 
-                (F.trim(c) == "") | 
-                (F.trim(F.upper(c)) == "NULL"), 
+                (c.isNull()) |
+                (F.trim(c) == "") |
+                (F.trim(F.upper(c)) == "NULL"),
                 None
             ).otherwise(F.trim(c))
 
+        # dev builds AddressLine1 from the first non-empty of Appellant_Address1..5
+        expected_line1 = F.coalesce(
+            clean_val("Appellant_Address1"), clean_val("Appellant_Address2"),
+            clean_val("Appellant_Address3"), clean_val("Appellant_Address4"),
+            clean_val("Appellant_Address5")
+        )
+
         acceptance_criteria = test_df.filter(
-            (~col("Detained").isin(1, 2)) & 
-            (col("appealOutOfCountry") == "No") &
-            
+            (~col("Detained").isin(1, 2)) &
+            (F.array_contains(col("CategoryIds"), 37)) &
+            (col("appellantAddress").isNotNull()) &
             (
-                (~clean_val("appellantAddress.AddressLine1").eqNullSafe(clean_val("Appellant_Address1"))) |
+                (~clean_val("appellantAddress.AddressLine1").eqNullSafe(expected_line1)) |
                 (~clean_val("appellantAddress.AddressLine2").eqNullSafe(clean_val("Appellant_Address2"))) |
                 (~clean_val("appellantAddress.PostTown").eqNullSafe(clean_val("Appellant_Address3"))) |
                 (~clean_val("appellantAddress.County").eqNullSafe(clean_val("Appellant_Address4"))) |

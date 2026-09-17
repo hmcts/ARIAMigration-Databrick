@@ -815,12 +815,15 @@ def test_listCaseHearingLength(test_df):
 
         # Rounding: divide by 30, round to nearest whole number, then multiply by 30
         final_df = winning_records.withColumn(
-            "calculated_length", (F.round(F.col("TimeEstimate") / 30) * 30).cast("int")
+            "calculated_length", (F.floor((F.col("TimeEstimate").cast("double") / 30.0) + 0.5) * 30).cast("int")
         ).withColumn(
-            "expected_length", F.greatest(F.lit(30), F.col("calculated_length"))
+            "expected_length", F.when(F.col("TimeEstimate").isNull(), F.lit(None).cast("string"))
+             .otherwise(F.least(F.lit(360), F.greatest(F.lit(30), F.col("calculated_length"))).cast("string"))
         )
 
-        acceptance_critera = final_df.filter(F.col("listCaseHearingLength") != F.col("expected_length"))
+        acceptance_critera = final_df.filter((F.col("listCaseHearingLength") != F.col("expected_length")) &
+            ~(F.col("listCaseHearingLength").isNull() & F.col("expected_length").isNull())
+        )
 
         if acceptance_critera.count() > 0:
             return TestResult("listCaseHearingLength", "FAIL", f"listCaseHearingLength acceptance criteria failed: found {acceptance_critera.count()} rounding mismatches. JSON does not match nearest 30min increment.", test_from_state, inspect.stack()[0].function)

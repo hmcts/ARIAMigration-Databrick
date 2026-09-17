@@ -144,7 +144,7 @@ spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.c
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Please note that running the DLT pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
+# MAGIC Please note that running the dp pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
 
 # COMMAND ----------
 
@@ -294,7 +294,7 @@ run_id_value = datetime_uuid()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Raw DLT Tables Creation
+# MAGIC ## Raw dp Tables Creation
 
 # COMMAND ----------
 
@@ -359,12 +359,9 @@ def Raw_HearingCentre():
 def Raw_Users():
     return read_latest_parquet("Users", "tv_Users", "ARIA_ARM_JOH_ARA")
 
-
-@dlt.table(
+@dp.table(
     name="raw_status",
-    comment="Delta Live Table ARIA Status.",
-    path=f"{raw_mnt}/Raw_Status"
-)
+    comment="Delta Live Table ARIA Status.")
 def Raw_Status():
     return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_JOH_ARA")
 
@@ -373,7 +370,7 @@ def Raw_Status():
 
 # MAGIC
 # MAGIC %md
-# MAGIC ## Bronze DLT Tables Creation
+# MAGIC ## Bronze dp Tables Creation
 
 # COMMAND ----------
 
@@ -574,7 +571,7 @@ def bronze_johistory_users():
 
 # COMMAND ----------
 
-# DLT Table 1: bronze_othercentre_hearingcentre
+# dp Table 1: bronze_othercentre_hearingcentre
 @dp.table(
     name="bronze_othercentre_hearingcentre",
     comment="Delta Live Table combining OtherCentre data with HearingCentre information.")
@@ -619,7 +616,7 @@ def bronze_othercentre_hearingcentre():
 # COMMAND ----------
 
 
-# DLT Table 2: bronze_adjudicator_role
+# dp Table 2: bronze_adjudicator_role
 @dp.table(
     name="bronze_adjudicator_role",
     comment="Delta Live Table for Adjudicator Role data.")
@@ -648,14 +645,13 @@ def bronze_adjudicator_role():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_status",
-    comment="Delta Live Table for Status data used to determine the latest decision date associated with an Adjudicator.",
-    path=f"{bronze_mnt}/bronze_status"
+    comment="Delta Live Table for Status data used to determine the latest decision date associated with an Adjudicator."
 )
 def bronze_status():
     df = (
-        dlt.read("raw_status").alias("st")
+        dp.read("raw_status").alias("st")
         .select(
             col("st.AdjudicatorId"),
             col("st.DeterminationBy"),
@@ -672,7 +668,7 @@ def bronze_status():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Segmentation DLT Tables Creation - stg_joh_filtered
+# MAGIC ## Segmentation dp Tables Creation - stg_joh_filtered
 # MAGIC Segmentation query (to be applied in silver):
 # MAGIC
 # MAGIC ```sql
@@ -730,15 +726,10 @@ def bronze_status():
 
 @dp.table(
     name="stg_joh_filtered",
-<<<<<<< HEAD
-    comment="Delta Live silver Table segmentation with judges only using bronze_adjudicator_et_hc_dnur, filtered by role and 7-year retention window.",
-    path=f"{silver_mnt}/stg_joh_filtered"
+    comment="Delta Live silver Table segmentation with judges only using bronze_adjudicator_et_hc_dnur, filtered by role and 7-year retention window."
 )
-=======
-    comment="Delta Live silver Table segmentation with judges only using bronze_adjudicator_et_hc_dnur.")
->>>>>>> 454f4650 (Update pipeline code to use UC and @dp)
 def stg_joh_filtered():
-    status = dlt.read("bronze_status")
+    status = dp.read("bronze_status").alias("s")
 
     all_statuses = (
         status.filter(col("AdjudicatorId").isNotNull())
@@ -780,18 +771,13 @@ def stg_joh_filtered():
     df = (
         dp.read("bronze_adjudicator_et_hc_dnur").alias("a")
         .join(
-<<<<<<< HEAD
-            dlt.read("bronze_adjudicator_role").alias("jr"),
+            dp.read("bronze_adjudicator_role").alias("jr"),
             col("a.AdjudicatorId") == col("jr.AdjudicatorId"),
             "left"
         )
         .join(
             max_decision_date.alias("s"),
             col("a.AdjudicatorId") == col("s.AdjId"),
-=======
-            dp.read("bronze_adjudicator_role").alias("jr"),
-            col("a.AdjudicatorId") == col("jr.AdjudicatorId"), 
->>>>>>> 454f4650 (Update pipeline code to use UC and @dp)
             "left"
         )
         .filter((~col("jr.Role").isin(7, 8)) | (col("jr.Role").isNull()))
@@ -808,7 +794,7 @@ def stg_joh_filtered():
 
 # MAGIC
 # MAGIC %md
-# MAGIC ## Silver DLT Tables Creation
+# MAGIC ## Silver dp Tables Creation
 
 # COMMAND ----------
 
@@ -1128,7 +1114,7 @@ def silver_appointment_detail():
     name="silver_archive_metadata",
     comment="Delta Live Silver Table for Archive Metadata data.")
 def silver_archive_metadata():
-    status = dlt.read("bronze_status")
+    status = dp.read("bronze_status")
 
     all_statuses = (
         status.filter(col("AdjudicatorId").isNotNull())
@@ -1193,11 +1179,7 @@ def silver_archive_metadata():
     df_final = (
         df_with_env.select(
             col("adj.AdjudicatorId").alias("client_identifier"),
-<<<<<<< HEAD
             date_format(event_date_expr, "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-=======
-            date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
->>>>>>> 454f4650 (Update pipeline code to use UC and @dp)
             date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
             lit("GBR").alias("region"),
             lit("ARIA").alias("publisher"),
@@ -1219,7 +1201,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Silver DLT staging table for gold transformation
+# MAGIC ## Silver dp staging table for gold transformation
 
 # COMMAND ----------
 

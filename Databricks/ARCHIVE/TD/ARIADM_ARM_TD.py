@@ -704,7 +704,6 @@ def bronze_appeal_case_tribunal_decision():
         .agg(F.max("StatusId").alias("UT_ID"))
     )
 
-<<<<<<< HEAD
     max_46_subquery = (
         dlt.read("raw_status")
         .filter(col("CaseStatus") == "46")
@@ -722,19 +721,12 @@ def bronze_appeal_case_tribunal_decision():
         .agg(F.max(col("s.StatusId")).alias("Prev_ID"))
     )
 
-    ac = dlt.read("raw_appealcase").alias("ac")
-    t = dlt.read("raw_status").alias("t")
-    st = dlt.read("raw_status").alias("st")
-    us = dlt.read("raw_status").alias("us")
-    sa = dlt.read("raw_status").alias("sa")
-    fl = dlt.read("raw_filelocation").alias("fl")
-=======
     ac = dp.read("raw_appealcase").alias("ac")
     t  = dp.read("raw_status").alias("t")
     st = dp.read("raw_status").alias("st")
     us = dp.read("raw_status").alias("us")
     fl = dp.read("raw_filelocation").alias("fl")
->>>>>>> 454f4650 (Update pipeline code to use UC and @dp)
+    sa = dp.read("raw_status").alias("sa")
 
     df = (
         ac

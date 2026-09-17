@@ -16,6 +16,8 @@ class remittedDQRules(DQRulesBase):
             ftpaFinalDecisionForDisplay = "undecided"
         """)
 
+        return checks
+
     def get_checks_remitted(self, checks={}):
 
         checks["valid_rehearingReason"] = ("""

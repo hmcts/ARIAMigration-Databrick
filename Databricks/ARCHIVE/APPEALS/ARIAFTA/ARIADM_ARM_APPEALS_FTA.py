@@ -41,7 +41,7 @@
 # MAGIC       </tr>
 # MAGIC        <tr>
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-361">ARIADM-361</a>/NSA/DEC-2024</td>
-# MAGIC          <td>Update New Bronze Table with Linked Cost Award</td>
+# MAGIC          <td>Update New Bronze Table with Lindked Cost Award</td>
 # MAGIC       </tr>
 # MAGIC        <tr>
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-363">ARIADM-363</a>/NSA/DEC-2024</td>
@@ -106,6 +106,7 @@ from datetime import datetime
 from pyspark.sql.window import Window
 # from pyspark.sql.functions import row_number
 from delta.tables import DeltaTable
+from pyspark.sql.functions import date_format
 
 # COMMAND ----------
 
@@ -133,7 +134,6 @@ print(f"KeyVault_name: {KeyVault_name}")
 # COMMAND ----------
 
 # DBTITLE 1,Configure SP OAuth
-
 # Service principal credentials
 client_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-ID")
 client_secret = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-SECRET")
@@ -233,6 +233,7 @@ display(variables)
 # COMMAND ----------
 
 
+
 # Function to recursively list all files in the ADLS directory
 def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
@@ -323,6 +324,7 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 # MAGIC
 
 # COMMAND ----------
+
 
 @dp.table(
     name="raw_appealcase",
@@ -738,6 +740,7 @@ def raw_UpperTribunalHearingDirection():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang",
     comment="Delta Live Table combining Appeal Case data with Case Respondent, Main Respondent, Respondent, File Location, Case Representative, Representative, and Language.")
@@ -947,6 +950,7 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_appealcase_ca_apt_country_detc",
     comment="Delta Live Table combining Case Appellant data with Appellant, Detention Centre, and Country information.")
@@ -1023,6 +1027,7 @@ def bronze_appealcase_ca_apt_country_detc():
 # MAGIC ### Transformation M3. bronze_ appealcase _cl_ht_list_lt_hc_c_ls_adj
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj",
@@ -1120,6 +1125,7 @@ def bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_appealcase_bfdiary_bftype",
     comment="Delta Live Table combining BFDiary and BFType details.")
@@ -1153,6 +1159,7 @@ def bronze_appealcase_bfdiary_bftype():
 # MAGIC ### Transformation M5: bronze_ appealcase _history_users 
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_appealcase_history_users",
@@ -1191,6 +1198,7 @@ def bronze_appealcase_history_users():
 # MAGIC ### Transformation M6: bronze_appealcase_link_linkdetail 
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_appealcase_link_linkdetail",
@@ -1235,6 +1243,7 @@ def bronze_appealcase_link_linkdetail():
 # MAGIC ### Transformation M7: bronze_appealcase_status_sc_ra_cs 
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_appealcase_status_sc_ra_cs",
@@ -1446,6 +1455,7 @@ def bronze_appealcase_status_sc_ra_cs():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_appealcase_appealcatagory_catagory",
     comment="Delta Live Table for joining AppealCategory and Category tables to retrieve case and category details.")
@@ -1471,6 +1481,7 @@ def bronze_appealcase_appealcatagory_catagory():
 # MAGIC ### Transformation M10: bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at",
@@ -1612,6 +1623,7 @@ def bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_status_decisiontype",
     comment="Delta Live Table for joining Status and DecisionType tables to retrieve case and decision type details.")
@@ -1640,6 +1652,7 @@ def bronze_status_decisiontype():
 # MAGIC ### Transformation M12: bronze_appealcase_t_tt_ts_tm
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_appealcase_t_tt_ts_tm",
@@ -1728,6 +1741,7 @@ def bronze_appealcase_t_tt_ts_tm():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_appealcase_ahr_hr",
     comment="Delta Live Table for joining AppealHumanRight and HumanRight tables to retrieve case and human rights details.")
@@ -1754,6 +1768,7 @@ def bronze_appealcase_ahr_hr():
 # MAGIC ### Transformation M14: bronze_appealcase_anm_nm 
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_appealcase_anm_nm",
@@ -1788,6 +1803,7 @@ def bronze_appealcase_anm_nm():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_appealcase_dr_rd",
     comment="Delta Live Table for joining DocumentsReceived and ReceivedDocument tables to retrieve document details.")
@@ -1820,6 +1836,7 @@ def bronze_appealcase_dr_rd():
 # MAGIC ### Transformation M16: bronze_appealcase_rsd_sd
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_appealcase_rsd_sd",
@@ -1854,6 +1871,7 @@ def bronze_appealcase_rsd_sd():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_review_specific_direction",
     comment="Delta Live Table for retrieving details from the ReviewSpecificDirection table.")
@@ -1881,6 +1899,7 @@ def bronze_review_specific_direction():
 # COMMAND ----------
 
 # DBTITLE 1,Costward
+
 @dp.table(
     name="bronze_cost_award",
     comment="Delta Live Table for retrieving details from the CostAward table.")
@@ -1935,6 +1954,7 @@ def bronze_cost_award():
 # COMMAND ----------
 
 # DBTITLE 1,Cost award linked
+
 @dp.table(
     name="bronze_cost_award_linked",
     comment="Delta Live Table for retrieving details from the CostAward_linked table.")
@@ -1987,6 +2007,7 @@ def bronze_cost_award_linked():
 # COMMAND ----------
 
 # DBTITLE 1,Cost Order
+
 @dp.table(
     name="bronze_costorder",
     comment="Delta Live Table for retrieving details from the CostOrder table.")
@@ -2029,6 +2050,7 @@ def bronze_costorder():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_hearing_points_change_reason",
     comment="Delta Live Table for retrieving details from the HearingPointsChangeReason table.")
@@ -2054,6 +2076,7 @@ def bronze_hearing_points_change_reason():
 # MAGIC ### Transformation: bronze_hearing_points_history
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_hearing_points_history",
@@ -2085,6 +2108,7 @@ def bronze_hearing_points_history():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_appeal_type_category",
     comment="Delta Live Table for retrieving details from the AppealTypeCategory table.")
@@ -2114,6 +2138,7 @@ def bronze_appeal_type_category():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="bronze_appeal_grounds",
     comment="Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.")
@@ -2137,6 +2162,7 @@ def bronze_appeal_grounds():
 # MAGIC ### Transformation: bronze_required_adjudicator
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_required_incompatible_adjudicator",
@@ -2163,6 +2189,7 @@ def bronze_required_incompatible_adjudicator():
 # MAGIC ### Transformation: bronze_case_adjudicator
 
 # COMMAND ----------
+
 
 @dp.table(
     name="bronze_case_adjudicator",
@@ -2192,6 +2219,7 @@ def bronze_case_adjudicator():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: CaseStatusCategory
+
 @dp.table(
     name="stg_appealcasestatus_filtered",
     comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.")
@@ -2490,6 +2518,7 @@ def stg_appealcasestatus_filtered():
 # COMMAND ----------
 
 
+
 def add_years(date_col, years):
     return date_col + expr(f'INTERVAL {years} YEARS')
 
@@ -2499,8 +2528,6 @@ def add_years(date_col, years):
 def stg_firsttier_filtered():
     appeal_cases =  dp.read("stg_appealcasestatus_filtered")
     FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FTA').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
-    appeal_cases =  dp.read("stg_appealcasestatus_filtered")
-    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
 
     return FTRetained_cases.orderBy("ac.CaseNo") #FT Retained - ARM
 
@@ -2512,6 +2539,7 @@ def stg_firsttier_filtered():
 # MAGIC Segmentation query –  Skeleton Cases
 
 # COMMAND ----------
+
 
 
 @dp.table(
@@ -2604,13 +2632,14 @@ def stg_skeleton_filtered():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="stg_uppertribunalretained_filtered",
     comment="Delta Live Table for filtering second tier AppealCase records for archive or delete based on complex conditions.")
 def stg_uppertribunalretained_filtered():
     appeal_cases =  dp.read("stg_appealcasestatus_filtered")
     
-    UTRetained_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Retained').select("ac.CaseNo", lit('ARIAUTA').alias('Segment'))
+    UTRetained_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Retained').select("ac.CaseNo", lit('UTA').alias('Segment'))
 
     return UTRetained_cases.orderBy("ac.CaseNo")
 
@@ -2623,6 +2652,7 @@ def stg_uppertribunalretained_filtered():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="stg_firsttieroverdue_filtered",
     comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.")
@@ -2630,7 +2660,7 @@ def stg_firsttieroverdue_filtered():
     # Reading base tables
     appeal_cases =  dp.read("stg_appealcasestatus_filtered")
 
-    FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'FT Overdue').select("ac.CaseNo", lit('ARIAFTA').alias('Segment'))
+    FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'FT Overdue').select("ac.CaseNo", lit('FTA').alias('Segment'))
 
 
     return FTOverdue_cases.orderBy("ac.CaseNo")
@@ -2644,6 +2674,7 @@ def stg_firsttieroverdue_filtered():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="stg_uppertribunaloverdue_filtered",
     comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.")
@@ -2651,7 +2682,7 @@ def stg_uppertribunaloverdue_filtered():
     # Reading base tables
     appeal_cases =  dp.read("stg_appealcasestatus_filtered")
 
-    FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Overdue').select("ac.CaseNo", lit('ARIAUTA').alias('Segment'))
+    FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Overdue').select("ac.CaseNo", lit('UTA').alias('Segment'))
 
     return FTOverdue_cases.orderBy("ac.CaseNo")
 
@@ -2663,6 +2694,7 @@ def stg_uppertribunaloverdue_filtered():
 # MAGIC Segmentation query – File preserved cases. 
 
 # COMMAND ----------
+
 
 @dp.table(
     name="stg_filepreservedcases_filtered",
@@ -2693,6 +2725,7 @@ def stg_filepreservedcases_filtered():
 # MAGIC Segmentation query – amalgamated segmentations
 
 # COMMAND ----------
+
 
 @dp.table(
     name="stg_appeals_filtered",
@@ -2734,6 +2767,7 @@ def stg_appeals_filtered():
 # MAGIC ### Transformation : silver_appealcase_detail
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_appealcase_detail",
@@ -2860,6 +2894,7 @@ def silver_appealcase_detail():
 # COMMAND ----------
 
 # DBTITLE 1,silver_applicant_detail
+
 @dp.table(
     name="silver_applicant_detail",
     comment="Delta Live silver Table for casenapplicant detail.")
@@ -2924,6 +2959,7 @@ def silver_applicant_detail():
 # COMMAND ----------
 
 # DBTITLE 1,silver_dependent_detail
+
 @dp.table(
     name="silver_dependent_detail",
     comment="Delta Live silver Table for casenapplicant detail.")
@@ -2991,6 +3027,20 @@ def silver_list_detail():
     appeals_df = dp.read("bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj").alias("ca")
     flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
+    window_spec = (Window.partitionBy("CaseNo", "StatusId").orderBy(desc("Chairman")))
+
+    judge_value_df = (
+        appeals_df
+        .withColumn("rn", row_number().over(window_spec))
+        .filter(col("rn") == 1)
+        .select("CaseNo", "StatusId",
+            concat_ws( "", col("ListAdjudicatorSurname"), 
+                      lit(", "), col("ListAdjudicatorForenames"), 
+                      lit(" ("), col("ListAdjudicatorTitle"), 
+                      lit(")")
+            ).alias("JudgeValue")
+        ))
+          
     adjudicator_details = (
         appeals_df
         .filter(col("Position").isin(10, 11, 12, 3))
@@ -3036,6 +3086,11 @@ def silver_list_detail():
                                 (col("adj4.Position") == lit(3)) & 
                                 (col("adj4.CaseStatus") == col("ca.CaseStatus")), 
                                 "left")\
+                          .join(judge_value_df.alias("jv"),
+                            (col("jv.CaseNo") == col("ca.CaseNo")) &
+                            (col("jv.StatusId") == col("ca.StatusId")),
+                            "left"
+                                  )\
                           .withColumn("TimeEstimate_hh_mm", 
                                       expr("floor(ca.TimeEstimate / 60) || ':' || lpad(cast(ca.TimeEstimate % 60 as string), 2, '0')"))\
                           .withColumn("utj", coalesce(col("ca.UpperTribJudge"), lit(0)))\
@@ -3090,17 +3145,6 @@ def silver_list_detail():
                                         else null
                                       end
                                       """))\
-                          .withColumn(
-                                      "JudgeValue_full", 
-                                      concat_ws("", 
-                                          col("ca.ListAdjudicatorSurname"), 
-                                          lit(", "), 
-                                          col("ca.ListAdjudicatorForenames"), 
-                                          lit(" ("), 
-                                          col("ca.ListAdjudicatorTitle"), 
-                                          lit(")")
-                                      )
-                                  )\
                           .select(
                               "ca.CaseNo",
                               "ca.Outcome",
@@ -3137,13 +3181,12 @@ def silver_list_detail():
                               "JudgeLabel1",
                               "JudgeLabel2",
                               "JudgeLabel3",
-                              col("JudgeValue_full").alias("JudgeValue"),
+                              col("jv.JudgeValue").alias("JudgeValue"),
                               col("adj1.JudgeValue").alias("Label1_JudgeValue"),
                               col("adj2.JudgeValue").alias("Label2_JudgeValue"),
                               col("adj3.JudgeValue").alias("Label3_JudgeValue"),
                               col("adj4.JudgeValue").alias("CourtClerkUsher")
                           )
-
 
     return joined_df
 
@@ -3153,6 +3196,7 @@ def silver_list_detail():
 # MAGIC ### Transformation : silver_dfdairy_detail
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_dfdairy_detail",
@@ -3175,6 +3219,7 @@ def silver_dfdairy_detail():
 # MAGIC ### Transformation : silver_history_detail
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_history_detail",
@@ -3283,6 +3328,7 @@ def silver_history_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_link_detail",
     comment="Delta Live silver Table for list detail.")
@@ -3308,6 +3354,7 @@ def silver_link_detail():
 # MAGIC ### Transformation : silver_status_detail
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_status_detail",
@@ -3525,6 +3572,7 @@ def silver_status_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_appealcategory_detail",
     comment="Delta Live silver Table for status detail.")
@@ -3544,6 +3592,7 @@ def silver_appealcategory_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_case_detail",
     comment="Delta Live silver Table for case detail.")
@@ -3555,8 +3604,8 @@ def silver_case_detail():
     col("case.CaseNo"),
     col("case.DatePosting1stTier"),
     col("case.DatePostingUpperTier"),
-    col("case.DateCorrectFeeReceived"),
-    col("case.DateCorrectFeeDeemedReceived"),
+    coalesce(col("case.DateCorrectFeeReceived"), col("case.DateCorrectFeeDeemedReceived")).alias("DateCorrectFeeReceived"),
+    coalesce(col("case.DateCorrectFeeDeemedReceived"), col("case.DateCorrectFeeReceived")).alias("DateCorrectFeeDeemedReceived"),
     when(col("case.PaymentRemissionrequested") == 1, lit("Yes"))
         .when(col("case.PaymentRemissionrequested") == 2, lit("No"))
         .otherwise(lit(None)).alias("PaymentRemissionrequested"),
@@ -3686,6 +3735,7 @@ def silver_case_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_statusdecisiontype_detail",
     comment="Delta Live silver Table for transaction detail.")
@@ -3704,6 +3754,7 @@ def silver_statusdecisiontype_detail():
 # MAGIC ### Transformation : silver_transaction_detail
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_transaction_detail",
@@ -3819,6 +3870,7 @@ def silver_transaction_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_humanright_detail",
     comment="Delta Live silver Table for human rights detail.")
@@ -3837,6 +3889,7 @@ def silver_humanright_detail():
 # MAGIC ### Transformation : silver_newmatter_detail"
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_newmatter_detail",
@@ -3867,6 +3920,7 @@ def silver_newmatter_detail():
 # MAGIC ### Transformation : silver_documents_detail
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_documents_detail",
@@ -3902,6 +3956,7 @@ def silver_documents_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="sliver_direction_detail",
     comment="Delta Live silver Table for direction details.")
@@ -3920,6 +3975,7 @@ def sliver_direction_detail():
 # MAGIC ### Transformation : silver_reviewspecificdirection_detail
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_reviewspecificdirection_detail",
@@ -3941,6 +3997,7 @@ def Silver_reviewspecificdirection_detail():
 # COMMAND ----------
 
 # DBTITLE 1,silver_linkedcostaward_detail
+
 @dp.table(
     name="silver_linkedcostaward_detail",
     comment="Delta Live silver Table for cost award detail.")
@@ -3992,6 +4049,7 @@ def silver_linkedcostaward_detail():
 # COMMAND ----------
 
 # DBTITLE 1,silver_costaward_detail
+
 @dp.table(
     name="silver_costaward_detail",
     comment="Delta Live silver Table for cost award detail.")
@@ -4045,6 +4103,7 @@ def silver_costaward_detail():
 # MAGIC ### Transformation : silver_costorder_detail 
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_costorder_detail",
@@ -4103,6 +4162,7 @@ def silver_costorder_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_hearingpointschange_detail",
     comment="Delta Live silver Table for hearing points change reason detail.")
@@ -4127,6 +4187,7 @@ def silver_hearingpointschange_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_hearingpointshistory_detail",
     comment="Delta Live silver Table for hearing points history detail.")
@@ -4145,6 +4206,7 @@ def silver_hearingpointshistory_detail():
 # MAGIC ### Transformation : silver_appealtypecategory_detail
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_appealtypecategory_detail",
@@ -4165,6 +4227,7 @@ def silver_appealtypecategory_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_appealgrounds_detail",
     comment="Delta Live silver Table for appeal ground  detail.")
@@ -4184,6 +4247,7 @@ def silver_appealgrounds_detail():
 
 # COMMAND ----------
 
+
 @dp.table(
     name="silver_required_incompatible_adjudicator",
     comment="Delta Live silver Table for appeal ground  detail.")
@@ -4201,6 +4265,7 @@ def silver_required_incompatible_adjudicator():
 # MAGIC ### Transformation: silver_case_adjudicator
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_case_adjudicator",
@@ -4221,6 +4286,7 @@ def silver_case_adjudicator():
 # MAGIC
 
 # COMMAND ----------
+
 
 @dp.table(
     name="silver_archive_metadata",
@@ -4336,11 +4402,13 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
+
 secret = dbutils.secrets.get(KeyVault_name, f"CURATED-{env_name}-SAS-TOKEN")
 
 # COMMAND ----------
 
 # DBTITLE 1,Azure Blob Storage Container Access
+
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
 
@@ -4370,6 +4438,7 @@ upload_udf = udf(upload_to_blob)
 # COMMAND ----------
 
 # DBTITLE 1,Function: Generate a360 Metadata
+
 import json
 from pyspark.sql.functions import udf
 from pyspark.sql.types import StringType
@@ -4436,6 +4505,7 @@ generate_a360_udf = udf(generate_a360, StringType())
 # COMMAND ----------
 
 # DBTITLE 1,Function: Format Dates for UploadBlob Storage
+
     
 # Upload HTML to Azure Blob Storage
 def upload_to_blob(file_name, file_content):
@@ -4458,6 +4528,7 @@ def format_date_iso(date_value):
         return date_value.strftime("%Y-%m-%d")
     except Exception:
         return ""
+        # return "9999-12-31"
 
 # Helper to format dates in dd/MM/YYYY format
 def format_date(date_value):
@@ -4507,6 +4578,7 @@ template_paths_and_names = [
 
 # COMMAND ----------
 
+
 import pickle
 import zlib
 
@@ -4527,6 +4599,7 @@ print(f"Compressed: {len(templates_blob) / 1024 / 1024:.2f} MB")
 # COMMAND ----------
 
 # DBTITLE 1,Function: Generate HTML with Dynamic Row and Template Data
+
 # # Modify the UDF to accept a row object and templates
 # def generate_html(row, templates=templates):
 #     templates = pickle.loads(zlib.decompress(templates_blob))
@@ -4968,6 +5041,7 @@ print(f"Compressed: {len(templates_blob) / 1024 / 1024:.2f} MB")
 
 # COMMAND ----------
 
+
 """
 Scalar pandas_udf replacement for the generate_html_udf.
 
@@ -5078,19 +5152,18 @@ def make_generate_html_pandas_udf(templates_blob):
                 return g(l, "ListId") is None
         return True  # Not found in ListDetails
 
-
     DATE_FIELDS = [
-        "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
-        "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
-        "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
-        "AppellantBirthDate", "DateCorrectFeeReceived", "DateCorrectFeeDeemedReceived", "DateServed",
-        "DateAppealReceived", "BFDate",
+    "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
+    "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
+    "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
+    "AppellantBirthDate", "DateCorrectFeeReceived", "DateCorrectFeeDeemedReceived", "DateServed",
+    "DateAppealReceived", "BFDate"
     ]
 
     DEPENDENT_FIELDS = [
-        "AppellantName", "AppellantForenames", "AppellantTitle", "CaseAppellantRelationship",
-        "AppellantAddress1", "AppellantAddress2", "AppellantAddress3", "AppellantAddress4",
-        "AppellantAddress5", "AppellantPostcode", "AppellantTelephone",
+    "AppellantName", "AppellantForenames", "AppellantTitle", "CaseAppellantRelationship",
+    "AppellantAddress1", "AppellantAddress2", "AppellantAddress3", "AppellantAddress4",
+    "AppellantAddress5", "AppellantPostcode", "AppellantTelephone"
     ]
 
 
@@ -5109,13 +5182,13 @@ def make_generate_html_pandas_udf(templates_blob):
             # Work on a copy so we don't mutate the caller's dict in place
             row_dict = dict(row_dict)
 
-            date_correct_fee_received = row_dict.get("DateCorrectFeeReceived")
-            date_correct_fee_deemed_received = row_dict.get("DateCorrectFeeDeemedReceived")
+            # date_correct_fee_received = row_dict.get("DateCorrectFeeReceived")
+            # date_correct_fee_deemed_received = row_dict.get("DateCorrectFeeDeemedReceived")
 
-            if date_correct_fee_received and not date_correct_fee_deemed_received:
-                row_dict["DateCorrectFeeDeemedReceived"] = date_correct_fee_received
-            elif date_correct_fee_deemed_received and not date_correct_fee_received:
-                row_dict["DateCorrectFeeReceived"] = date_correct_fee_deemed_received
+            # if date_correct_fee_received and not date_correct_fee_deemed_received:
+            #     row_dict["DateCorrectFeeDeemedReceived"] = date_correct_fee_received
+            # elif date_correct_fee_deemed_received and not date_correct_fee_received:
+            #     row_dict["DateCorrectFeeReceived"] = date_correct_fee_deemed_received
 
             detained = row_dict.get("Detained")
 
@@ -5180,7 +5253,8 @@ def make_generate_html_pandas_udf(templates_blob):
                     f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{str(g(link, 'CaseNo'))}</td>"
                     f"<td id=\"midpadding\">{str(g(link, 'LinkAppellantName'))}, {str(g(link, 'LinkAppellantForenames'))} ({str(g(link, 'LinkAppellantTitle'))})</td>"
                     f"<td id=\"midpadding\">{str(g(link, 'LinkDetailComment'))}</td></tr>"
-                    for link in (linked_case_details or [])
+                    for link in sorted(linked_case_details, key=lambda x: str(g(x, "CaseNo") or ""))
+                    #for link in (linked_case_details or [])
                 ),
                 "{{PaymentEventsSummaryPlaceHolder}}": "\n".join(
                     f"<tr><td id=\"midpadding\">{format_date(g(t, 'TransactionDate'))}</td>"
@@ -5296,15 +5370,24 @@ def make_generate_html_pandas_udf(templates_blob):
                     f"<tr><td id=\"midpadding\">{g(d, 'AppellantName')}</td><td id=\"midpadding\">{g(d, 'CaseAppellantRelationship')}</td></tr>"
                     for d in (dependent_details or [])
                 ),
+                # this is correct ordering, per Bella
                 "{{StatusTypesPlaceHolder}}": "\n".join(
                     "<tr>"
                     f"<td id=\"midpadding\">{i + 1}</td>"
                     f"<td id=\"midpadding\">{g(st, 'CaseStatusDescription')}</td>"
                     f"<td id=\"midpadding\">{g(st, 'DecisionTypeDescription')}</td>"
                     "</tr>"
-                    for i, st in enumerate(status_details or [])
-                ),
-            }
+                    for i, st in enumerate(sorted(status_details, key=lambda x: g(x, "StatusId"), reverse=True))
+                )}
+                # "{{StatusTypesPlaceHolder}}": "\n".join(
+                #     "<tr>"
+                #     f"<td id=\"midpadding\">{i + 1}</td>"
+                #     f"<td id=\"midpadding\">{g(st, 'CaseStatusDescription')}</td>"
+                #     f"<td id=\"midpadding\">{g(st, 'DecisionTypeDescription')}</td>"
+                #     "</tr>"
+                #    for i, st in enumerate(
+                #     sorted(sorted(status_details, key=lambda x: g(x, "Outcome"), reverse=True), key=lambda x: g(x, "CaseStatus")))
+                # )}
 
             for key, value in nested_replacements.items():
                 html_template = html_template.replace(key, value)
@@ -5631,6 +5714,7 @@ generate_html_udf = make_generate_html_pandas_udf(templates_blob)
 # COMMAND ----------
 
 # DBTITLE 1,Case Types LookUP
+
 data = [
     (1, "Adjudicator Appeal", None, None),
     (2, "Application for Adjournment", None, None),
@@ -5705,6 +5789,7 @@ lookup_df = spark.createDataFrame(data, columns).filter(col("path").isNotNull())
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_statichtml_data
+
 @dp.table(
     name="stg_statichtml_data",
     comment="Delta Live Silver Table for Archive Metadata data.")
@@ -5826,7 +5911,149 @@ def stg_statichtml_data():
 
 # COMMAND ----------
 
+
+# from pyspark.sql import functions as F
+# from pyspark.sql.window import Window
+
+# df_list_details = spark.read.table("aria_stg01.ariadm_arm_fta.silver_list_detail")
+# # df_list_details = spark.read.table("aria_stg01.ariadm_arm_fta.ariadm_arm_fta.silver_list_detail")
+# window_spec = Window.partitionBy("CaseNo", "CaseStatus", "StatusId").orderBy("ListStartTime")
+# df_list_details = df_list_details.withColumn("row_num", row_number().over(window_spec))
+# df_list_details = df_list_details.filter(col("row_num") == 1).drop("row_num")
+
+# df_status_details = spark.read.table("aria_stg01.ariadm_arm_fta.silver_status_detail")
+# df_hearingpointschange_details = spark.read.table("aria_stg01.ariadm_arm_fta.silver_hearingpointschange_detail")
+# df_reviewspecificdirection_details = spark.read.table("aria_stg01.ariadm_arm_fta.silver_reviewspecificdirection_detail")
+
+# df_case_adjudicator = spark.read.table("aria_stg01.ariadm_arm_fta.silver_case_adjudicator").groupBy("CaseNo").agg(
+#     collect_list(struct( 'Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("CaseAdjudicatorsDetails")
+# )
+
+# df_reviewspecificdirection = spark.read.table("aria_stg01.ariadm_arm_fta.silver_reviewspecificdirection_detail").groupBy("CaseNo").agg(
+#     collect_list(struct(
+#         'ReviewSpecificDirectionId', 'CaseNo', 'StatusId', 'SpecificDirection', 
+#         'DateRequiredIND', 'DateRequiredAppellantRep', 'DateReceivedIND', 'DateReceivedAppellantRep'
+#     )).alias("ReviewSpecficDirectionDetails")
+# )
+
+# df_reviewstandarddirection = spark.read.table("aria_stg01.ariadm_arm_fta.sliver_direction_detail").groupBy("CaseNo").agg(
+#     collect_list(struct(
+#         'ReviewStandardDirectionId', 'CaseNo', 'StatusId', 'StandardDirectionId', 
+#         'DateRequiredIND', 'DateRequiredAppellantRep', 'DateReceivedIND', 'DateReceivedAppellantRep'
+#     )).alias("ReviewStandardDirectionDirectionDetails")
+# )
+
+# # casestatus with templates
+# casestatus_array = [
+#     26, 29, 27, 28, 30, 35, 39, 41, 37, 38, 42, 40, 10, 34, 32, 31, 33, 36, 50, 
+#     43, 51, 52, 48, 44, 49, 46, 45, 47, 53, 17
+# ]
+
+# w = Window.partitionBy("CaseNo", "AdjournmentParentStatusId").orderBy(col("StatusId").desc())
+
+# adjournment_parents_old = (
+#     df_status_details
+#     .filter(col("CaseStatus") == 17)          # filter first
+#     .withColumn("rn", row_number().over(w))   # then rank within the filtered set
+#     # .filter(col("rn") == 1)
+#     .select(
+#         col("AdjournmentParentStatusId").alias("ParentStatusId"), 
+#         col("CaseNo"),
+#         col("StatusId").alias("StatusId"),
+#         col("ApplicationType").alias("adjournApplicationType"),
+#         col("InTime").alias("adjournInTime"),
+#         col("DecisionTypeDescription").alias("adjournDecisionTypeDescription"),
+#         col("DateReceived").alias("adjournDateReceived"),
+#         col("MiscDate1").alias("adjournmiscdate1"),
+#         col("MiscDate2").alias("adjournmiscdate2"),
+#         col("Party").alias("adjournParty"),
+#         col("Letter1Date").alias("adjournLetter1Date"),
+#         col("Letter2Date").alias("adjournLetter2Date"),
+#         col("DecisionDate").alias("adjournDecisionDate"),
+#         col("Promulgated").alias("adjournPromulgated"),
+#         col("UKAITNo").alias("UKAITNo"),
+#         col("Notes1").alias("adjournNotes1"),
+#         col("StatusDetailAdjudicatorSurname").alias("adjournAdjudicatorSurname"),
+#         col("StatusDetailAdjudicatorForenames").alias("adjournAdjudicatorForenames"),
+#         col("StatusDetailAdjudicatorTitle").alias("adjournAdjudicatorTitle"),
+#         col("KeyDate").alias("adjournKeyDate"),
+#         col("rn"),
+#         # ).drop(col("rn")
+#     ))
+
+# adjournment_parents_old.filter(col("CaseNo").isin(
+# #     "EA/03627/2023",
+# # "HU/04962/2016",
+# # "LE/04007/2024",
+# # "PA/01443/2020",
+# # "PA/11516/2016",
+# # "IA/09536/2022",
+# "LP/06709/2024")).display()
+
+# adjournment_parents = (
+#     df_status_details
+#     .filter(col("CaseStatus") == 17)
+#     .withColumn("rn", row_number().over(w))
+#     .filter(col("rn") == 1)
+#     .select(
+#         col("AdjournmentParentStatusId").alias("ParentStatusId"), 
+#         col("CaseNo"),
+#         col("StatusId").alias("StatusId"),
+#         col("ApplicationType").alias("adjournApplicationType"),
+#         col("InTime").alias("adjournInTime"),
+#         col("DecisionTypeDescription").alias("adjournDecisionTypeDescription"),
+#         col("DateReceived").alias("adjournDateReceived"),
+#         col("MiscDate1").alias("adjournmiscdate1"),
+#         col("MiscDate2").alias("adjournmiscdate2"),
+#         col("Party").alias("adjournParty"),
+#         col("Letter1Date").alias("adjournLetter1Date"),
+#         col("Letter2Date").alias("adjournLetter2Date"),
+#         col("DecisionDate").alias("adjournDecisionDate"),
+#         col("Promulgated").alias("adjournPromulgated"),
+#         col("UKAITNo").alias("UKAITNo"),
+#         col("Notes1").alias("adjournNotes1"),
+#         col("StatusDetailAdjudicatorSurname").alias("adjournAdjudicatorSurname"),
+#         col("StatusDetailAdjudicatorForenames").alias("adjournAdjudicatorForenames"),
+#         col("StatusDetailAdjudicatorTitle").alias("adjournAdjudicatorTitle"),
+#         col("KeyDate").alias("adjournKeyDate"),
+#         col("rn")
+#     ))
+
+# adjournment_parents.filter(col("CaseNo").isin(
+# #     "EA/03627/2023",
+# # "HU/04962/2016",
+# # "LE/04007/2024",
+# # "PA/01443/2020",
+# # "PA/11516/2016",
+# # "IA/09536/2022",
+# "LP/06709/2024")).display()
+
+# # adjournment_parents = adjournment_parents.withColumn(
+# #     "adjournAdjudicatorFullName",
+# #     F.concat(
+# #         F.col("adjournAdjudicatorSurname"),
+# #         F.lit(", "),
+# #         F.col("adjournAdjudicatorForenames"),
+# #         F.when(
+# #             F.col("adjournAdjudicatorTitle").isNotNull(),
+# #             F.concat(F.lit(" ("), F.col("adjournAdjudicatorTitle"), F.lit(")"))
+# #         ).otherwise(F.lit(""))
+# #     )
+# # )
+
+# # adjourned_withdrawal_df = df_status_details.join(
+# # adjournment_parents.alias("adjournment_parents"),
+# # df_status_details.StatusId == adjournment_parents.ParentStatusId,
+# # "inner"
+# # ).select(df_status_details["*"], col("adjournment_parents.adjournApplicationType"), col("adjournment_parents.adjournInTime"),col("adjournment_parents.adjournDecisionTypeDescription"), col("adjournment_parents.adjournDateReceived"), col("adjournment_parents.adjournmiscdate1"), col("adjournment_parents.adjournmiscdate2"), col("adjournment_parents.adjournParty"), col("adjournment_parents.adjournLetter1Date"), col("adjournment_parents.adjournLetter2Date"), col("adjournment_parents.adjournDecisionDate"), col("adjournment_parents.adjournPromulgated"), col("adjournment_parents.adjournNotes1"), col("adjournment_parents.adjournAdjudicatorSurname"), col("adjournment_parents.adjournAdjudicatorForenames"), col("adjournment_parents.adjournAdjudicatorTitle"), col("adjournment_parents.adjournKeyDate"), col("adjournment_parents.UKAITNo"), col("adjournment_parents.adjournAdjudicatorFullName"))
+
+# # adjourned_withdrawal_df.filter(col("CaseNo").isin("EA/11098/2022")).display()
+
+
+# COMMAND ----------
+
 # DBTITLE 1,Transformation: stg_statusdetail_data
+
 @dp.table(
     name="stg_statusdetail_data",
     comment="Delta Live Silver Table for Archive Metadata data.")
@@ -5868,12 +6095,17 @@ def stg_statusdetail_data():
         43, 51, 52, 48, 44, 49, 46, 45, 47, 53, 17
     ]
 
+    w = Window.partitionBy("CaseNo", "AdjournmentParentStatusId").orderBy(col("StatusId").desc())
+
     adjournment_parents = (
         df_status_details
         .filter(col("CaseStatus") == 17)
+        .withColumn("rn", row_number().over(w))
+        .filter(col("rn") == 1)
         .select(
             col("AdjournmentParentStatusId").alias("ParentStatusId"), 
             col("CaseNo"),
+            col("StatusId").alias("StatusId"),
             col("ApplicationType").alias("adjournApplicationType"),
             col("InTime").alias("adjournInTime"),
             col("DecisionTypeDescription").alias("adjournDecisionTypeDescription"),
@@ -5890,9 +6122,8 @@ def stg_statusdetail_data():
             col("StatusDetailAdjudicatorSurname").alias("adjournAdjudicatorSurname"),
             col("StatusDetailAdjudicatorForenames").alias("adjournAdjudicatorForenames"),
             col("StatusDetailAdjudicatorTitle").alias("adjournAdjudicatorTitle"),
-            col("KeyDate").alias("adjournKeyDate"),
-            )
-        )
+            col("KeyDate").alias("adjournKeyDate")
+        ))
 
     adjournment_parents = adjournment_parents.withColumn(
         "adjournAdjudicatorFullName",
@@ -6046,6 +6277,7 @@ def stg_statusdetail_data():
 # COMMAND ----------
 
 # DBTITLE 0,Transformation: stg_fta_combined
+
 @dp.table(
     name="stg_apl_combined",
     comment="Delta Live unified stage created all consolidated data.")
@@ -6244,6 +6476,7 @@ def stg_apl_combined():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_fta_create_json_content
+
 @dp.table(
     name="stg_apl_create_json_content",
     comment="Delta Live unified stage Gold Table for gold outputs.")
@@ -6263,6 +6496,7 @@ def stg_apl_create_json_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_fta_create_html_content
+
 @dlt.table(
     name="stg_apl_create_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.")
@@ -6293,17 +6527,12 @@ def stg_apl_create_html_content():
         )
     )
 
-
-    # df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content",
-    # generate_html_udf(struct(*[col(c) for c in df_with_statusdetail_data.columns]))).withColumn(
-    #     "File_Name", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
-   
-
     return df_with_html_content.select("CaseNo","HTML_Content","File_Name","Status")
 
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_fta_create_a360_content
+
 @dp.table(
     name="stg_apl_create_a360_content",
     comment="Delta Live unified stage Gold Table for gold outputs.")
@@ -6340,6 +6569,7 @@ def stg_apl_create_a360_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_appeals_unified
+
 @dp.table(
     name="stg_appeals_unified",
     comment="Delta Live unified stage Gold Table for gold outputs.")
@@ -6392,6 +6622,7 @@ def stg_appeals_unified():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_appeals_with_json
+
 @dp.table(
     name="gold_appeals_with_json",
     comment="Delta Live Gold Table with JSON content.")
@@ -6422,6 +6653,7 @@ def gold_appeals_with_json():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_appeals_with_html
+
 checks = {}
 checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
 
@@ -6452,6 +6684,7 @@ def gold_appeals_with_html():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_appeals_with_a360
+
 checks = {}
 checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 
@@ -6492,9 +6725,5 @@ def gold_appeals_with_a360():
 # COMMAND ----------
 
 # DBTITLE 1,Exit Notebook with Success Message
+
 dbutils.notebook.exit("Notebook completed successfully")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Appendix

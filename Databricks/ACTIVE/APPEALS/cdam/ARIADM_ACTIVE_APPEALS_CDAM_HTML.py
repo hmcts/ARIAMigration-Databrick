@@ -59,6 +59,9 @@ print(f"env_name: {env_name}")  # This won't be redacted
 KeyVault_name = f"ingest{lz_key}-meta002-{env_name}"
 print(f"KeyVault_name: {KeyVault_name}")
 
+catalog_name = f"aria_{env_name}{lz_key}"
+print(f"Catalog name is {catalog_name}")
+
 # COMMAND ----------
 
 # DBTITLE 1,Configure SP OAuth

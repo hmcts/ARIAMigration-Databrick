@@ -28,19 +28,13 @@
 # run custom functions
 import sys
 import os
-# Append the parent directory to sys.path
-# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..','..')))
-# from pyspark.sql.functions import col, max
 
-import dp
 import json
-from pyspark.sql.functions import * #when, col,coalesce, current_timestamp, lit, date_format, trim, max
+from pyspark.sql.functions import *
 from pyspark.sql.types import *
-# from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pyspark.sql.window import Window
-# from pyspark.sql.functions import row_number
-from delta.tables import DeltaTable
+from pyspark import pipelines as dp
 
 # COMMAND ----------
 

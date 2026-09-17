@@ -14,5 +14,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_AWAITING_EVIDENCE_RESPONDENT_B_JSON"
-      target: awaitingRespondentEvidenceB_gold
+      catalog: aria_${bundle.target}
+      schema: awaitingRespondentEvidenceB_gold
       development: true

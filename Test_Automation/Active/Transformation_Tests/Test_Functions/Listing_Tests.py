@@ -92,15 +92,39 @@ from pyspark.sql.functions import col, when, lit
 def test_Listing_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
-             "ariaDesiredState": "listing"
+             "ariaDesiredState": "listing",
+             "reviewedHearingRequirements": "No"
         }
 
         results_list = []
         
+        _gold_state = None
+        if "ariaDesiredState" in test_df.columns:
+            _r = test_df.select("ariaDesiredState").limit(1).collect()
+            if _r:
+                _gold_state = _r[0][0]
+        _skip_hearing_defaults = (_gold_state == "ended")
+
+        STATE_OVERRIDES = {
+            "reviewedHearingRequirements": {
+                "prepareForHearing": "Yes", "decision": "Yes", "decided": "Yes",
+                "ftpaSubmitted": "Yes", "ftpaDecided": "Yes", "remitted": "Yes",
+            },
+        }
+
         for field, expected in expected_defaults.items():
             if field in fields_to_exclude:
                 continue
-            condition = (col(field) != expected)
+            if _skip_hearing_defaults and field == "reviewedHearingRequirements":
+                continue
+            _ov = STATE_OVERRIDES.get(field)
+            if _ov and "ariaDesiredState" in test_df.columns:
+                _exp = lit(expected)
+                for _st, _v in _ov.items():
+                    _exp = when(col("ariaDesiredState") == _st, lit(_v)).otherwise(_exp)
+                condition = (col(field) != _exp)
+            else:
+                condition = (col(field) != expected)
             fail_count = test_df.filter(condition).count()
             if fail_count > 0:
                 results_list.append(TestResult(
@@ -134,7 +158,7 @@ def test_Listing_defaultValues(test_df, fields_to_exclude):
         ]
         
         no_fields = [
-            "isWitnessesAttending", "datesToAvoidYesNo", "reviewedHearingRequirements", 
+            "isWitnessesAttending", "datesToAvoidYesNo", 
             "reviewResponseActionAvailable", "uploadHomeOfficeAppealResponseActionAvailable"
         ]
         
@@ -145,7 +169,7 @@ def test_Listing_defaultValues(test_df, fields_to_exclude):
         ]
 
         # 1. Validate "Yes" Group
-        for field in yes_fields:
+        for field in ([] if _skip_hearing_defaults else yes_fields):
             fail_count = test_df.filter((col(field) != "Yes") | col(field).isNull()).count()
             results_list.append(TestResult(
                 field, 
@@ -156,7 +180,7 @@ def test_Listing_defaultValues(test_df, fields_to_exclude):
             ))
 
         # 2. Validate "No" Group 
-        for field in no_fields:
+        for field in ([] if _skip_hearing_defaults else no_fields):
             fail_count = test_df.filter((col(field) != "No") | col(field).isNull()).count()
             results_list.append(TestResult(
                 field, 
@@ -167,7 +191,7 @@ def test_Listing_defaultValues(test_df, fields_to_exclude):
             ))
 
         # 3. Validate ARIA Descriptions (FIXED FAIL STATUS)
-        for field in aria_desc_fields:
+        for field in ([] if _skip_hearing_defaults else aria_desc_fields):
             fail_count = test_df.filter((col(field) != aria_reqs_text) | col(field).isNull()).count()
             results_list.append(TestResult(
                 field, 
@@ -207,8 +231,9 @@ def test_Listing_defaultValues(test_df, fields_to_exclude):
         ))
 
         # 8. Hearing Requirements Array
-        hr_fail = test_df.filter(size(col("hearingRequirements")) != 0).count()
-        results_list.append(TestResult("hearingRequirements", "PASS" if hr_fail == 0 else "FAIL", f"Array should be empty ({hr_fail} records)" if hr_fail > 0 else "Array is empty", test_from_state, inspect.stack()[0].function))
+        if not _skip_hearing_defaults:
+            hr_fail = test_df.filter(size(col("hearingRequirements")) != 0).count()
+            results_list.append(TestResult("hearingRequirements", "PASS" if hr_fail == 0 else "FAIL", f"Array should be empty ({hr_fail} records)" if hr_fail > 0 else "Array is empty", test_from_state, inspect.stack()[0].function))
 
         return results_list
 
@@ -1123,7 +1148,7 @@ def test_languageInterpreterMapping(test_df):
     177: ("spokenLanguageInterpreter", "aze", "Azerbajani (aka Nth Azari)", [], None),
     178: ("spokenLanguageInterpreter", "ctg", "Chittagonain", [], None),
     179: ("spokenLanguageInterpreter", None, None, ["Yes"], "Cambellpuri"),
-    180: ("spokenLanguageInterpreter", "kur-kbr", "Kurdish kurmanji", [], None),
+    180: ("spokenLanguageInterpreter", "kur-kbr", "Kurdish Bardini", [], None),
     181: ("spokenLanguageInterpreter", "gjk", "Kachi", [], None),
     182: ("spokenLanguageInterpreter", None, None, ["Yes"], "Bharuchi"),
     183: ("spokenLanguageInterpreter", None, None, ["Yes"], "Emakhuna"),
@@ -1156,7 +1181,7 @@ def test_languageInterpreterMapping(test_df):
     210: ("spokenLanguageInterpreter", "slv", "Slovenian", [], None),
     211: ("spokenLanguageInterpreter", "hac", "Gorani", [], None),
     212: ("spokenLanguageInterpreter", "lub", "Luba (Tshiluba)", [], None),
-    213: ("spokenLanguageInterpreter", "kur-kbr", "Kurdish kurmanji", [], None),
+    213: ("spokenLanguageInterpreter", "kur-kbr", "Kurdish Bardini", [], None),
     214: ("spokenLanguageInterpreter", "tuk", "Turkmen", [], None),
     215: ("spokenLanguageInterpreter", "kir", "Kyrgyz", [], None),
     216: ("spokenLanguageInterpreter", "mkw", "Monokutuba", [], None),

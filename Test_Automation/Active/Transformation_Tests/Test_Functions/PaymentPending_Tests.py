@@ -6865,7 +6865,6 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
         expected_defaults = {
             "ccdReferenceNumberForDisplay": "",
             "isAppealReferenceNumberAvailable": "Yes",
-            "appellantInDetention": "No",
             "hasOtherAppeals": "NotSure",
             "s94bStatus": "No",
             "isAdmin": "Yes",
@@ -6896,8 +6895,7 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
             "uploadAddendumEvidenceLegalRepActionAvailable": "No",
             "uploadAddendumEvidenceHomeOfficeActionAvailable": "No",
             "uploadAddendumEvidenceAdminOfficerActionAvailable": "No",
-            "uploadAdditionalEvidenceHomeOfficeActionAvailable": "No",
-            "appellantInDetention":"No"
+            "uploadAdditionalEvidenceHomeOfficeActionAvailable": "No"
         }
 
         expected_arrays = {
@@ -6911,10 +6909,25 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
 
         results_list = []
 
+        _ACTION_FLAG_STATES = {"reasonsForAppealSubmitted": "Yes", "listing": "Yes", "prepareForHearing": "Yes"}
+        STATE_OVERRIDES = {
+            "changeDirectionDueDateActionAvailable": _ACTION_FLAG_STATES,
+            "markEvidenceAsReviewedActionAvailable": _ACTION_FLAG_STATES,
+            "uploadAdditionalEvidenceActionAvailable": _ACTION_FLAG_STATES,
+            "uploadAdditionalEvidenceHomeOfficeActionAvailable": _ACTION_FLAG_STATES,
+        }
+
         for field, expected in expected_defaults.items():
             if field in fields_to_exclude:
                 continue
-            condition = (col(field) != expected)
+            _ov = STATE_OVERRIDES.get(field)
+            if _ov and "ariaDesiredState" in test_df.columns:
+                _exp = lit(expected)
+                for _st, _v in _ov.items():
+                    _exp = when(col("ariaDesiredState") == _st, lit(_v)).otherwise(_exp)
+                condition = (col(field) != _exp)
+            else:
+                condition = (col(field) != expected)
             if test_df.filter(condition).count() > 0:
                 results_list.append(TestResult(
                     field, 

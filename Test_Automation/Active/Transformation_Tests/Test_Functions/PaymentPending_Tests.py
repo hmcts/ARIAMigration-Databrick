@@ -4645,7 +4645,11 @@ def test_remission_mapping(
             asf_exp = F.lit(expected_asylumSupportReference)
 
         if "legalAidAccountNumber" in use_source_for:
-            la_exp = F.coalesce(F.col("LSCReference"), F.lit("Unknown"))
+             la_raw = F.coalesce(F.col("LSCReference"), F.lit("Unknown"))
+             la_exp = F.when(
+                (la_raw != "Unknown") & (F.length(la_raw) < 6),
+                F.lpad(la_raw, 6, "0")
+            ).otherwise(la_raw)
         else:
             la_exp = F.lit(expected_legalAidAccountNumber)
 

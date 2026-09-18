@@ -32,26 +32,26 @@ def test_default_mapping_init(json):
 
 def test_AREA_defaultValues(test_df, fields_to_exclude, current_state=None):
     try:
-        _UHOB_NO_STATES = {
+        bundle_available_no_states = {
             "awaitingRespondentEvidence(b)", "caseUnderReview", "listing", "prepareForHearing",
             "decision", "decided(a)", "decided(b)", "ftpaSubmitted(a)", "ftpaSubmitted(b)",
             "ftpaDecided", "remitted",
         }
-        _UHOB_NO_ARIA_STATES = {
+        bundle_available_no_gold_states = {
             "caseUnderReview", "listing", "prepareForHearing", "decision", "decided",
             "ftpaSubmitted", "ftpaDecided", "remitted",
         }
-        _uhob_expected = "Yes"
+        bundle_available_expected = "Yes"
         if current_state is not None:
-            if current_state in _UHOB_NO_STATES:
-                _uhob_expected = "No"
+            if current_state in bundle_available_no_states:
+                bundle_available_expected = "No"
         elif "ariaDesiredState" in test_df.columns:
-            _r = test_df.select("ariaDesiredState").limit(1).collect()
-            if _r and _r[0][0] in _UHOB_NO_ARIA_STATES:
-                _uhob_expected = "No"
+            gold_state_row = test_df.select("ariaDesiredState").limit(1).collect()
+            if gold_state_row and gold_state_row[0][0] in bundle_available_no_gold_states:
+                bundle_available_expected = "No"
 
         expected_defaults = {
-             "uploadHomeOfficeBundleAvailable": _uhob_expected,
+             "uploadHomeOfficeBundleAvailable": bundle_available_expected,
              "ariaDesiredState": "awaitingRespondentEvidence"
         }
 

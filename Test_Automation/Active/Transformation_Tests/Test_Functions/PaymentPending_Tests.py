@@ -6815,10 +6815,7 @@ def test_oocLrCountryGovUkAdminJ_test1(test_df_sd,external_storage,spark):
 #######################
 def test_default_mapping_init(json):
     try:
-        if "isHomeOfficeIntegrationEnabled" not in json.columns:
-            json = json.withColumn("isHomeOfficeIntegrationEnabled", lit(None).cast("string"))
-            
-        test_df = json.select(
+        default_mapping_columns = [
             "appealReferenceNumber",
             "isAppealReferenceNumberAvailable",
             "caseLinks",
@@ -6866,7 +6863,11 @@ def test_default_mapping_init(json):
             "paymentStatus",
             "hasServiceRequestAlready",
             "feeVersion"
-        )
+        ]
+        for column_name in default_mapping_columns:
+            if column_name not in json.columns:
+                json = json.withColumn(column_name, lit(None).cast("string"))
+        test_df = json.select(*default_mapping_columns)
         return test_df, True
     except Exception as e:
         error_message = str(e)        
@@ -6921,23 +6922,28 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
 
         results_list = []
 
-        _ACTION_FLAG_STATES = {"reasonsForAppealSubmitted": "Yes", "listing": "Yes", "prepareForHearing": "Yes"}
-        STATE_OVERRIDES = {
-            "changeDirectionDueDateActionAvailable": _ACTION_FLAG_STATES,
-            "markEvidenceAsReviewedActionAvailable": _ACTION_FLAG_STATES,
-            "uploadAdditionalEvidenceActionAvailable": _ACTION_FLAG_STATES,
-            "uploadAdditionalEvidenceHomeOfficeActionAvailable": _ACTION_FLAG_STATES,
+        action_flag_yes_states = {
+            "caseUnderReview": "Yes", "reasonsForAppealSubmitted": "Yes",
+            "listing": "Yes", "prepareForHearing": "Yes",
+        }
+        change_direction_yes_states = dict(action_flag_yes_states)
+        change_direction_yes_states["awaitingRespondentEvidence"] = "Yes"
+        state_overrides = {
+            "changeDirectionDueDateActionAvailable": change_direction_yes_states,
+            "markEvidenceAsReviewedActionAvailable": action_flag_yes_states,
+            "uploadAdditionalEvidenceActionAvailable": action_flag_yes_states,
+            "uploadAdditionalEvidenceHomeOfficeActionAvailable": action_flag_yes_states,
         }
 
         for field, expected in expected_defaults.items():
             if field in fields_to_exclude:
                 continue
-            _ov = STATE_OVERRIDES.get(field)
-            if _ov and "ariaDesiredState" in test_df.columns:
-                _exp = lit(expected)
-                for _st, _v in _ov.items():
-                    _exp = when(col("ariaDesiredState") == _st, lit(_v)).otherwise(_exp)
-                condition = (col(field) != _exp)
+            overrides_for_field = state_overrides.get(field)
+            if overrides_for_field and "ariaDesiredState" in test_df.columns:
+                expected_column = lit(expected)
+                for override_state, override_value in overrides_for_field.items():
+                    expected_column = when(col("ariaDesiredState") == override_state, lit(override_value)).otherwise(expected_column)
+                condition = (col(field) != expected_column)
             else:
                 condition = (col(field) != expected)
             if test_df.filter(condition).count() > 0:

@@ -303,11 +303,20 @@ class prepareForHearingDQRules(DQRulesBase):
                 (
                     listCaseHearingDate IS NOT NULL
                     AND listCaseHearingDate <=>
-                        CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
-                            CASE
-                            WHEN StartTime IS NULL THEN '00:00:00.000'
-                            ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
-                            END)
+                        CASE
+                            WHEN listCaseHearing_CaseStatus = 38 AND HearingDate IS NULL THEN
+                                CONCAT(date_format(CAST(DecisionDate AS timestamp), 'yyyy-MM-dd'),'T',
+                                    CASE
+                                    WHEN StartTime IS NULL THEN '00:00:00.000'
+                                    ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
+                                    END)
+                            ELSE
+                                CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
+                                    CASE
+                                    WHEN StartTime IS NULL THEN '00:00:00.000'
+                                    ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
+                                    END)
+                        END
                         AND listCaseHearing_CaseStatus IS NOT NULL AND listCaseHearing_CaseStatus IN (37,38,26)
                         AND NOT(listCaseHearing_Outcome <=> 38)
                 )

@@ -54,6 +54,7 @@ def hearingDetails_outputs(spark):
         T.StructField("HearingCentre", T.StringType(), True),
         T.StructField("HearingDate", T.StringType(), True),
         T.StructField("StartTime", T.StringType(), True),
+        T.StructField("DecisionDate", T.StringType(), True),
     ])
 
     m3_data = [
@@ -82,6 +83,12 @@ def hearingDetails_outputs(spark):
         # CASE016: Test MAX(StatusId) - highest StatusId has CaseStatus 26, Outcome = 38 (should be excluded)
         ("CASE016", 1, 37, None, 180, "LOC004","2025-10-10T00:00:00.000+00:00","1899-12-30T18:00:00.000+00:00"),
         ("CASE016", 2, 26, 38, 180, "LOC004","2025-11-10T00:00:00.000+00:00","1899-12-30T19:00:00.000+00:00"),
+        
+        # CASE017: Test DecisionDate fallback - CaseStatus 38 with NULL HearingDate
+        ("CASE017", 1, 38, None, 120, "LOC005", None, None, "2024-06-15"),
+        
+        # CASE018: Test DecisionDate fallback - CaseStatus 38 with NULL HearingDate but valid StartTime
+        ("CASE018", 1, 38, None, 90, "LOC006", None, "2024-09-15T10:30:00.000+00:00", "2024-05-20"),
     ]  
      
     
@@ -402,3 +409,23 @@ def test_listCaseHearingCentreAddress(spark, hearingDetails_outputs):
     
     # CASE016: MAX(StatusId)=2 excluded, fallback to StatusId=1
     assert results["CASE016"]["listCaseHearingCentreAddress"] == "7676 jgfd", "CASE016 should use StatusId=1 row (LOC004)"
+
+
+def test_listCaseHearingDate_DecisionDate_Fallback(spark, hearingDetails_outputs):
+    """Test listCaseHearingDate uses DecisionDate when CaseStatus == 38 AND HearingDate is NULL
+    """
+    results = hearingDetails_outputs
+    
+    # CASE017: CaseStatus 38, HearingDate=NULL, DecisionDate='2024-06-15'
+    # Should use DecisionDate with time set to 00:00:00.000
+    assert results["CASE017"]["listCaseHearingDate"] == "2024-06-15T00:00:00.000", \
+        f"CASE017 should use DecisionDate (2024-06-15) when HearingDate is NULL, got {results['CASE017']['listCaseHearingDate']}"
+    
+    # CASE018: CaseStatus 38, HearingDate=NULL, StartTime='2024-09-15T10:30:00.000+00:00', DecisionDate='2024-05-20'
+    # Should use DecisionDate for date (2024-05-20) with StartTime preserved
+    assert results["CASE018"]["listCaseHearingDate"] == "2024-05-20T10:30:00.000", \
+        f"CASE018 should use DecisionDate (2024-05-20) with StartTime, got {results['CASE018']['listCaseHearingDate']}"
+    
+    # CASE006: CaseStatus 38 with valid HearingDate - should NOT use DecisionDate fallback
+    assert results["CASE006"]["listCaseHearingDate"] == "2026-12-03T00:00:00.000", \
+        f"CASE006 should use HearingDate since it's not NULL, got {results['CASE006']['listCaseHearingDate']}"

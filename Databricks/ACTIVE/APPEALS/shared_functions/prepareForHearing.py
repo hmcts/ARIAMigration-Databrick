@@ -439,7 +439,12 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
             ).getField("value").cast("string")
         ).withColumn(
                 "hearing_date_str",
-                F.date_format(F.to_timestamp(F.col("m3_lc.HearingDate")), "yyyy-MM-dd")
+                F.when(
+                    (F.col("m3_lc.CaseStatus") == 38) & F.col("m3_lc.HearingDate").isNull(),
+                    F.date_format(F.to_timestamp(F.col("m3_lc.DecisionDate")), "yyyy-MM-dd")
+                ).otherwise(
+                    F.date_format(F.to_timestamp(F.col("m3_lc.HearingDate")), "yyyy-MM-dd")
+                )
         ).withColumn(
             "start_time_str",
             F.when(

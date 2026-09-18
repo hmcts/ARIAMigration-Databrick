@@ -2,14 +2,26 @@ import pytest
 from pyspark.sql import SparkSession, types as T, Row
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPendingDetained import caseData
 from datetime import date, datetime
+import os
+import time
 
 @pytest.fixture(scope="session")
 def spark():
-    return (
+    # PySpark converts naive datetime() fixtures to TimestampType using the
+    # process's local timezone, independent of spark.sql.session.timeZone.
+    # Pin both to Europe/London (the convention prepareforhearing tests use)
+    # so the naive datetimes below round-trip the same way regardless of the
+    # host's local timezone.
+    os.environ["TZ"] = "Europe/London"
+    time.tzset()
+
+    spark = (
         SparkSession.builder
         .appName("caseDataTests")
         .getOrCreate()
     )
+    spark.conf.set("spark.sql.session.timeZone", "Europe/London")
+    return spark
 
 @pytest.fixture(scope="session")
 def caseData_outputs(spark):

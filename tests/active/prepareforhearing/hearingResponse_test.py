@@ -1,6 +1,8 @@
 from Databricks.ACTIVE.APPEALS.shared_functions.prepareForHearing import hearingResponse
 from pyspark.sql import SparkSession
 import pytest
+import os
+import time
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F, types as T
@@ -9,11 +11,23 @@ from datetime import date, datetime
 
 @pytest.fixture(scope="session")
 def spark():
-    return (
+    # PySpark converts naive datetime() fixtures to TimestampType using the
+    # process's local timezone, independent of spark.sql.session.timeZone.
+    # Pin both to Europe/London (the convention other prepareforhearing tests
+    # already use, e.g. hearingDetails_test.py) so the naive datetimes below
+    # round-trip the same way regardless of the host's local timezone, and
+    # so this fixture doesn't fight over the shared session's timezone conf
+    # when run alongside the other files in this folder.
+    os.environ["TZ"] = "Europe/London"
+    time.tzset()
+
+    spark = (
         SparkSession.builder
         .appName("HearingResponseTests")
         .getOrCreate()
     )
+    spark.conf.set("spark.sql.session.timeZone", "Europe/London")
+    return spark
 
 
 ##### Testing the documents field grouping function #####

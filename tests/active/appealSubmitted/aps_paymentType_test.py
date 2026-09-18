@@ -6,14 +6,26 @@ from pyspark.sql.functions import col
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, TimestampType, BooleanType
 from unittest.mock import patch
 import pytest
+import os
+import time
 
 
 @pytest.fixture(scope="session")
 def spark():
     """Create a Spark session for testing."""
-    return SparkSession.builder \
+    # PySpark converts naive datetime() fixtures to TimestampType using the
+    # process's local timezone, independent of spark.sql.session.timeZone.
+    # Pin both to Europe/London (the convention prepareforhearing tests use)
+    # so the naive datetimes below round-trip the same way regardless of the
+    # host's local timezone.
+    os.environ["TZ"] = "Europe/London"
+    time.tzset()
+
+    spark = SparkSession.builder \
         .appName("appealSubmitted_paymentType") \
         .getOrCreate()
+    spark.conf.set("spark.sql.session.timeZone", "Europe/London")
+    return spark
 
 
 class TestAppealSubmittedPaymentType:

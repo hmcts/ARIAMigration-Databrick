@@ -443,7 +443,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         ).withColumn(
             "start_time_str",
             F.when(
-                F.col("m3.StartTime").isNull(),
+                F.col("m3_lc.StartTime").isNull(),
                 F.lit("00:00:00.000")
             ).otherwise(
                 F.date_format(F.to_timestamp(F.col("m3_lc.StartTime")), "HH:mm:ss.SSS")

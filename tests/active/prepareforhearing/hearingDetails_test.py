@@ -49,6 +49,7 @@ def hearingDetails_outputs(spark):
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
         T.StructField("CaseStatus", T.IntegerType(), True),
+        T.StructField("Outcome", T.IntegerType(), True),
         T.StructField("TimeEstimate", T.IntegerType(), True),
         T.StructField("HearingCentre", T.StringType(), True),
         T.StructField("HearingDate", T.StringType(), True),
@@ -56,16 +57,32 @@ def hearingDetails_outputs(spark):
     ])
 
     m3_data = [
-        ("CASE005", 1, 37, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),
-        ("CASE005", 2, 37, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00"),   
-        ("CASE006", 1, 38, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00"),   
-        ("CASE007", 1, 38, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00"),  
-        ("CASE008", 1, 37, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE009", 1, 37, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE010", 1, 38, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE011", 1, 38, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00"),
-        ("CASE012", 1, 38, 0, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00")
-        ]  
+        # Existing test cases - CaseStatus IN (37, 38) with Outcome IS NULL
+        ("CASE005", 1, 37, None, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),
+        ("CASE005", 2, 37, None, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00"),   
+        ("CASE006", 1, 38, None, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00"),   
+        ("CASE007", 1, 38, None, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00"),  
+        ("CASE008", 1, 37, None, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
+        ("CASE009", 1, 37, None, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
+        ("CASE010", 1, 38, None, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
+        ("CASE011", 1, 38, None, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00"),
+        ("CASE012", 1, 38, None, 0, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00"),
+        
+        # New test cases for listCaseHearing fields with CaseStatus = 26
+        # CASE013: CaseStatus 26, Outcome != 38 (should be INCLUDED in listCaseHearing fields)
+        ("CASE013", 1, 26, 40, 120, "LOC001","2025-06-15T00:00:00.000+00:00","1899-12-30T14:00:00.000+00:00"),
+        
+        # CASE014: CaseStatus 26, Outcome = 38 (should be EXCLUDED from listCaseHearing fields)
+        ("CASE014", 1, 26, 38, 150, "LOC002","2025-07-20T00:00:00.000+00:00","1899-12-30T15:00:00.000+00:00"),
+        
+        # CASE015: Test MAX(StatusId) with multiple rows - highest StatusId has CaseStatus 26, Outcome != 38
+        ("CASE015", 1, 37, None, 90, "LOC003","2025-08-10T00:00:00.000+00:00","1899-12-30T16:00:00.000+00:00"),
+        ("CASE015", 2, 26, 50, 90, "LOC003","2025-09-10T00:00:00.000+00:00","1899-12-30T17:00:00.000+00:00"),
+        
+        # CASE016: Test MAX(StatusId) - highest StatusId has CaseStatus 26, Outcome = 38 (should be excluded)
+        ("CASE016", 1, 37, None, 180, "LOC004","2025-10-10T00:00:00.000+00:00","1899-12-30T18:00:00.000+00:00"),
+        ("CASE016", 2, 26, 38, 180, "LOC004","2025-11-10T00:00:00.000+00:00","1899-12-30T19:00:00.000+00:00"),
+    ]  
      
     
     loc_schema = T.StructType([
@@ -309,3 +326,79 @@ def test_witness10InterpreterSpokenLanguage(spark,hearingDetails_outputs):
     assert results["CASE001"]["witness10InterpreterSpokenLanguage"] == {}
     assert results["CASE002"]["witness10InterpreterSpokenLanguage"] == {}
     assert results["CASE006"]["witness10InterpreterSpokenLanguage"] == {}
+
+
+def test_listCaseHearingLength(spark, hearingDetails_outputs):
+    """Test listCaseHearingLength field with the new filter condition:
+    CaseStatus IN (37,38,26) AND Outcome != 38
+    """
+    results = hearingDetails_outputs
+    
+    # CASE013: CaseStatus 26, Outcome=40 (not 38) - should be INCLUDED
+    assert results["CASE013"]["listCaseHearingLength"] == "120", "CASE013 should have listCaseHearingLength=120 (rounded from 120)"
+    
+    # CASE014: CaseStatus 26, Outcome=38 - should be EXCLUDED (NULL)
+    assert results["CASE014"]["listCaseHearingLength"] is None, "CASE014 should have NULL listCaseHearingLength (Outcome=38 excluded)"
+    
+    # CASE015: MAX(StatusId)=2 has CaseStatus 26, Outcome=50 - should use that row
+    assert results["CASE015"]["listCaseHearingLength"] == "90", "CASE015 should use MAX(StatusId) row with CaseStatus 26, Outcome 50"
+    
+    # CASE016: MAX(StatusId)=2 has CaseStatus 26, Outcome=38 - excluded, fallback to StatusId=1
+    assert results["CASE016"]["listCaseHearingLength"] == "180", "CASE016 should use StatusId=1 row (StatusId=2 excluded due to Outcome=38)"
+
+
+def test_listCaseHearingDate(spark, hearingDetails_outputs):
+    """Test listCaseHearingDate field with the new filter condition:
+    CaseStatus IN (37,38,26) AND Outcome != 38
+    """
+    results = hearingDetails_outputs
+    
+    # CASE013: CaseStatus 26, Outcome=40 - should be INCLUDED
+    assert results["CASE013"]["listCaseHearingDate"] == "2025-06-15T14:00:00.000", "CASE013 should have listCaseHearingDate from StatusId=1 row"
+    
+    # CASE014: CaseStatus 26, Outcome=38 - should be EXCLUDED (NULL)
+    assert results["CASE014"]["listCaseHearingDate"] is None, "CASE014 should have NULL listCaseHearingDate (Outcome=38 excluded)"
+    
+    # CASE015: MAX(StatusId)=2 has CaseStatus 26, Outcome=50 - should use that row
+    assert results["CASE015"]["listCaseHearingDate"] == "2025-09-10T17:00:00.000", "CASE015 should use MAX(StatusId)=2 row"
+    
+    # CASE016: MAX(StatusId)=2 excluded, fallback to StatusId=1
+    assert results["CASE016"]["listCaseHearingDate"] == "2025-10-10T18:00:00.000", "CASE016 should use StatusId=1 row"
+
+
+def test_listCaseHearingCentre(spark, hearingDetails_outputs):
+    """Test listCaseHearingCentre field with the new filter condition:
+    CaseStatus IN (37,38,26) AND Outcome != 38
+    """
+    results = hearingDetails_outputs
+    
+    # CASE013: CaseStatus 26, Outcome=40 - should be INCLUDED
+    assert results["CASE013"]["listCaseHearingCentre"] == "Bham", "CASE013 should have listCaseHearingCentre from bronze data"
+    
+    # CASE014: CaseStatus 26, Outcome=38 - should be EXCLUDED (NULL)
+    assert results["CASE014"]["listCaseHearingCentre"] is None, "CASE014 should have NULL listCaseHearingCentre (Outcome=38 excluded)"
+    
+    # CASE015: MAX(StatusId)=2 has CaseStatus 26, Outcome=50 - should use that row
+    assert results["CASE015"]["listCaseHearingCentre"] == "Scot", "CASE015 should use MAX(StatusId)=2 row (LOC003)"
+    
+    # CASE016: MAX(StatusId)=2 excluded, fallback to StatusId=1
+    assert results["CASE016"]["listCaseHearingCentre"] == "Court4", "CASE016 should use StatusId=1 row (LOC004)"
+
+
+def test_listCaseHearingCentreAddress(spark, hearingDetails_outputs):
+    """Test listCaseHearingCentreAddress field with the new filter condition:
+    CaseStatus IN (37,38,26) AND Outcome != 38
+    """
+    results = hearingDetails_outputs
+    
+    # CASE013: CaseStatus 26, Outcome=40 - should be INCLUDED
+    assert results["CASE013"]["listCaseHearingCentreAddress"] == "123 xyz", "CASE013 should have listCaseHearingCentreAddress from bronze data"
+    
+    # CASE014: CaseStatus 26, Outcome=38 - should be EXCLUDED (NULL)
+    assert results["CASE014"]["listCaseHearingCentreAddress"] is None, "CASE014 should have NULL listCaseHearingCentreAddress (Outcome=38 excluded)"
+    
+    # CASE015: MAX(StatusId)=2 has CaseStatus 26, Outcome=50 - should use that row
+    assert results["CASE015"]["listCaseHearingCentreAddress"] == "456 asd", "CASE015 should use MAX(StatusId)=2 row (LOC003)"
+    
+    # CASE016: MAX(StatusId)=2 excluded, fallback to StatusId=1
+    assert results["CASE016"]["listCaseHearingCentreAddress"] == "7676 jgfd", "CASE016 should use StatusId=1 row (LOC004)"

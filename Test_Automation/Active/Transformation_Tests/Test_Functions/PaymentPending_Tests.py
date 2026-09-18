@@ -4351,19 +4351,34 @@ def test_homeOfficeReferenceNumber_ac2(ho_test_df):
         if ho_test_df != None:
             test_df = ho_test_df
 
-            if test_df.filter(
-                (col("appealOutOfCountry") == "Yes") &
-                col("CleansedHORef").isNotNull()
-                ).count() == 0:
-                return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-        
-            test_df = test_df.filter(
-            (col("appealOutOfCountry") == "Yes") &
-            (col("CleansedHORef").isNotNull())
+            gwf_filter = (
+                (~col("CleansedHORef").rlike("(?i)GWF")) &
+                (~col("HORef_M1").rlike("(?i)GWF")) &
+                (~col("FCONumber").rlike("(?i)GWF"))
             )
 
+            test_df = test_df.filter(
+                (col("appealOutOfCountry") == "Yes") &
+                (
+                    col("CleansedHORef").isNotNull() | 
+                    col("HORef_M1").isNotNull() | 
+                    col("FCONumber").isNotNull()
+                ) &
+                gwf_filter
+            )
+        
+            if test_df.count() == 0:
+                return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            
+            expected_ref = coalesce(col("CleansedHORef"), col("HORef_M1"), col("FCONumber"))
+
+            padded_ho_ref = when(
+                length(col("homeOfficeReferenceNumber")) < 6, 
+                lpad(col("homeOfficeReferenceNumber"), 6, "0")
+            ).otherwise(col("homeOfficeReferenceNumber"))
+
             ac_ref = test_df.filter(
-                (col("homeOfficeReferenceNumber") != col("CleansedHORef"))
+                padded_ho_ref != expected_ref
             )
 
             if ac_ref.count() != 0:

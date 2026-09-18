@@ -394,6 +394,11 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
+    # Separate condition for listCaseFields
+    silver_m3_filtered_casestatus_lc = silver_m3.filter((col("CaseStatus").isin(37, 38, 26)) & (~(col("Outcome").eqNullSafe(38))))
+    silver_m3_ranked_lc = silver_m3_filtered_casestatus_lc.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_lc = silver_m3_ranked_lc.filter(col("row_number") == 1).drop("row_number")
+
     silver_m3_filtered_casestatus = silver_m3_max_statusid
 
     allowed = [30,60,90,120,150,180,210,240,270,300,330,360]
@@ -414,27 +419,34 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
                 ).alias("value"),
                 listing_location_list.alias("list_items")
             )
-        ).withColumn(
-            "listCaseHearingLength",
+        )
+    )
+
+    silver_m3_listcase_fields = (silver_m3_max_statusid_lc.alias("m3_lc").join(
+        bronze_listing_location.alias("location"),
+        on=col("m3_lc.HearingCentre") == col("location.ListedCentre"),
+        how="left"
+    ).withColumn(
+        "listCaseHearingLength",
             F.array_min(
                 F.transform(
                     F.array(*[F.lit(x) for x in allowed]),
                     lambda x: F.struct(
-                        F.abs(x - F.col("m3.TimeEstimate").cast("int")).alias("dist"),
+                        F.abs(x - F.col("m3_lc.TimeEstimate").cast("int")).alias("dist"),
                         x.alias("value")
                     )
                 )
             ).getField("value").cast("string")
         ).withColumn(
                 "hearing_date_str",
-                F.date_format(F.to_timestamp(F.col("m3.HearingDate")), "yyyy-MM-dd")
+                F.date_format(F.to_timestamp(F.col("m3_lc.HearingDate")), "yyyy-MM-dd")
         ).withColumn(
             "start_time_str",
             F.when(
                 F.col("m3.StartTime").isNull(),
                 F.lit("00:00:00.000")
             ).otherwise(
-                F.date_format(F.to_timestamp(F.col("m3.StartTime")), "HH:mm:ss.SSS")
+                F.date_format(F.to_timestamp(F.col("m3_lc.StartTime")), "HH:mm:ss.SSS")
             )
         ).withColumn(
             "HearingDateTime_ts",
@@ -445,12 +457,12 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         ).withColumn(
             "listCaseHearingDate",
                 F.date_format(F.col("HearingDateTime_ts"), "yyyy-MM-dd'T'HH:mm:ss.SSS")
-        ).drop("hearing_date_str", "start_time_str", "HearingDateTime_ts")
+        )
         # Centre values (keep as array to match earlier pattern)
         .withColumn("listCaseHearingCentre", F.col("location.listCaseHearingCentre"))
-
         # Address (keep as-is; change to array(...) if your target schema expects array)
         .withColumn("listCaseHearingCentreAddress", F.col("location.listCaseHearingCentreAddress"))
+        .select("CaseNo", "listCaseHearingLength", "listCaseHearingDate", "listCaseHearingCentre", "listCaseHearingCentreAddress")
     )
 
     time_estimate = F.col("TimeEstimate").cast("int")
@@ -471,16 +483,17 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         .otherwise(base_hours)
     )
     
-    content_df = silver_m3_filtered_casestatus.withColumn(
-        "listingLength",
-        F.create_map(
-            F.lit("hours"),
-            F.when(col("TimeEstimate").isNull(), F.lit(0).cast("int"))
-            .otherwise(adjusted_hours).alias("hours"),
+    content_df = (silver_m3_filtered_casestatus.join(silver_m3_listcase_fields, on=col("CaseNo"), how="left")
+        .withColumn(
+            "listingLength",
+            F.create_map(
+                F.lit("hours"),
+                F.when(col("TimeEstimate").isNull(), F.lit(0).cast("int"))
+                .otherwise(adjusted_hours).alias("hours"),
 
-            F.lit("minutes"),
-            F.when(col("TimeEstimate").isNull(), F.lit(30).cast("int"))
-            .otherwise(rounded_minutes).alias("minutes"))
+                F.lit("minutes"),
+                F.when(col("TimeEstimate").isNull(), F.lit(30).cast("int"))
+                .otherwise(rounded_minutes).alias("minutes"))
         ).select(
             col("CaseNo").alias("CaseNo"),
             col("listCaseHearingLength"),
@@ -494,6 +507,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
             col("HearingDate"),
             col("StartTime")
         )
+    )
 
     hearingChannelListItems = array(
         struct(lit("INTER").cast("string").alias("code"), lit("In Person").cast("string").alias("label")),
@@ -595,26 +609,26 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
                 lit("Yes").alias("hearingChannel_Transformed"),
 
                 # listCaseHearingLength
-                array(struct(lit("CaseNo"),lit("TimeEstimate"))).alias("listCaseHearingLength_inputFields"),
-                array(struct(col("CaseNo"),col("TimeEstimate"))).alias("listCaseHearingLength_inputValues"),
+                array(struct(lit("CaseNo"),lit("TimeEstimate"),lit("CaseStatus"),lit("Outcome"))).alias("listCaseHearingLength_inputFields"),
+                array(struct(col("CaseNo"),col("TimeEstimate"),col("CaseStatus"),col("Outcome"))).alias("listCaseHearingLength_inputValues"),
                 col("hd.listCaseHearingLength").alias("listCaseHearingLength_value"),
                 lit("Yes").alias("listCaseHearingLength_Transformed"),
 
                 # listCaseHearingDate
-                array(struct(lit("CaseNo"),lit("HearingDate"),lit("StartTime"))).alias("listCaseHearingDate_inputFields"),
-                array(struct(col("CaseNo"),col("HearingDate"),col("StartTime"))).alias("listCaseHearingDate_inputValues"),
+                array(struct(lit("CaseNo"),lit("HearingDate"),lit("StartTime"),lit("CaseStatus"),lit("Outcome"))).alias("listCaseHearingDate_inputFields"),
+                array(struct(col("CaseNo"),col("HearingDate"),col("StartTime"),col("CaseStatus"),col("Outcome"))).alias("listCaseHearingDate_inputValues"),
                 col("hd.listCaseHearingDate").alias("listCaseHearingDate_value"),
                 lit("Yes").alias("listCaseHearingDate_Transformed"),
 
                 # listCaseHearingCentre
-                array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentre"))).alias("listCaseHearingCentre_inputFields"),
-                array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentre"))).alias("listCaseHearingCentre_inputValues"),
+                array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentre"),lit("CaseStatus"),lit("Outcome"))).alias("listCaseHearingCentre_inputFields"),
+                array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentre"),col("CaseStatus"),col("Outcome"))).alias("listCaseHearingCentre_inputValues"),
                 col("hd.listCaseHearingCentre").alias("listCaseHearingCentre_value"),
                 lit("Yes").alias("listCaseHearingCentre_Transformed"),
 
                 # listCaseHearingCentreAddress
-                array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputFields"),
-                array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputValues"),
+                array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentreAddress"),lit("CaseStatus"),lit("Outcome"))).alias("listCaseHearingCentreAddress_inputFields"),
+                array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentreAddress"),col("CaseStatus"),col("Outcome"))).alias("listCaseHearingCentreAddress_inputValues"),
                 col("hd.listCaseHearingCentreAddress").alias("listCaseHearingCentreAddress_value"),
                 lit("Yes").alias("listCaseHearingCentreAddress_Transformed"),
         )

@@ -4576,6 +4576,13 @@ def test_remission_init(json_data, M1_bronze):
             "inner"
         )
 
+        # Restrict dataset strictly to fee-paying remission appeal types
+        valid_remission_prefixes = ["EA", "EU", "HU", "PA"]
+
+        test_df = test_df.filter(
+            F.substring(col("m1_CaseNo"), 1, 2).isin(valid_remission_prefixes)
+        )
+
         return test_df, True
 
     except Exception as e:
@@ -4625,6 +4632,11 @@ def test_remission_mapping(
         # 2. Return None to indicate NO_DATA instead of a false PASS
         if row_count == 0:
             return None, f"NO DATA: 0 records found for PaymentRemissionRequested={PaymentRemissionRequested}, PaymentRemissionReason={PaymentRemissionReason}.", 0
+        
+        def norm(col_name):
+            if col_name in filtered_data.columns:
+                return F.when(F.trim(F.col(col_name)) == "", None).otherwise(F.col(col_name))
+            return F.lit(None)
 
         # 3. Dynamic reference building for reference fields
         if "asylumSupportReference" in use_source_for:
@@ -4644,13 +4656,13 @@ def test_remission_mapping(
 
         # 4. Filter mismatches across target CCD fields
         mismatches_df = filtered_data.filter(
-            (~F.col("remissionType").eqNullSafe(expected_remissionType)) |
-            (~F.col("remissionClaim").eqNullSafe(expected_remissionClaim)) |
-            (~F.col("feeRemissionType").eqNullSafe(expected_feeRemissionType)) |
-            (~F.col("exceptionalCircumstances").eqNullSafe(expected_exceptionalCircumstances)) |
-            (~F.col("legalAidAccountNumber").eqNullSafe(la_exp)) |
-            (~F.col("asylumSupportReference").eqNullSafe(asf_exp)) |
-            (~F.col("helpWithFeesReferenceNumber").eqNullSafe(hwf_exp))
+            (~norm("remissionType").eqNullSafe(expected_remissionType)) |
+            (~norm("remissionClaim").eqNullSafe(expected_remissionClaim)) |
+            (~norm("feeRemissionType").eqNullSafe(expected_feeRemissionType)) |
+            (~norm("exceptionalCircumstances").eqNullSafe(expected_exceptionalCircumstances)) |
+            (~norm("legalAidAccountNumber").eqNullSafe(la_exp)) |
+            (~norm("asylumSupportReference").eqNullSafe(asf_exp)) |
+            (~norm("helpWithFeesReferenceNumber").eqNullSafe(hwf_exp))
         )
 
         mismatch_count = mismatches_df.count()

@@ -1,6 +1,8 @@
 from Databricks.ACTIVE.APPEALS.shared_functions.prepareForHearing import hearingDetails
 from pyspark.sql import SparkSession
 import pytest
+import os
+import time
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F, types as T
@@ -8,12 +10,15 @@ from pyspark.sql import functions as F, types as T
 
 @pytest.fixture(scope="session")
 def spark():
+    os.environ["TZ"] = "Europe/London"
+    time.tzset()
+
     spark = (
         SparkSession.builder
         .appName("hearingDetailsTests")
         .getOrCreate()
     )
-    spark.conf.set("spark.sql.session.timeZone", "Europe/London")  # All existing tests use local time, change this to UTC on full test refactor
+    spark.conf.set("spark.sql.session.timeZone", "Europe/London")
     return spark
 
 ##### Testing the documents field grouping function #####

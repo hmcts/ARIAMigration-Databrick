@@ -13,11 +13,6 @@ import time
 @pytest.fixture(scope="session")
 def spark():
     """Create a Spark session for testing."""
-    # PySpark converts naive datetime() fixtures to TimestampType using the
-    # process's local timezone, independent of spark.sql.session.timeZone.
-    # Pin both to Europe/London (the convention prepareforhearing tests use)
-    # so the naive datetimes below round-trip the same way regardless of the
-    # host's local timezone.
     os.environ["TZ"] = "Europe/London"
     time.tzset()
 

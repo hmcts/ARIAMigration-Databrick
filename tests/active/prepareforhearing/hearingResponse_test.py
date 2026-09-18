@@ -11,13 +11,6 @@ from datetime import date, datetime
 
 @pytest.fixture(scope="session")
 def spark():
-    # PySpark converts naive datetime() fixtures to TimestampType using the
-    # process's local timezone, independent of spark.sql.session.timeZone.
-    # Pin both to Europe/London (the convention other prepareforhearing tests
-    # already use, e.g. hearingDetails_test.py) so the naive datetimes below
-    # round-trip the same way regardless of the host's local timezone, and
-    # so this fixture doesn't fight over the shared session's timezone conf
-    # when run alongside the other files in this folder.
     os.environ["TZ"] = "Europe/London"
     time.tzset()
 

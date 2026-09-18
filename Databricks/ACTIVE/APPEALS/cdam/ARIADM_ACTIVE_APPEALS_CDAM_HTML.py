@@ -2132,7 +2132,7 @@ def bronze_case_adjudicator():
 
 # COMMAND ----------
 
-stg_appeals_filtered = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states")
+# stg_appeals_filtered = spark.read.table(f"{catalog_name}.ariadm_active_appeals.stg_segmentation_states")
 
 # COMMAND ----------
 

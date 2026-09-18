@@ -47,22 +47,24 @@ def hearingDetails_outputs(spark):
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
         T.StructField("CaseStatus", T.IntegerType(), True),
+        T.StructField("Outcome", T.IntegerType(), True),
         T.StructField("TimeEstimate", T.IntegerType(), True),
         T.StructField("HearingCentre", T.StringType(), True),
         T.StructField("HearingDate", T.StringType(), True),
         T.StructField("StartTime", T.StringType(), True),
+        T.StructField("DecisionDate", T.StringType(), True),
     ])
 
     m3_data = [
-        ("CASE005", 1, 37, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),
-        ("CASE005", 2, 37, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00"),   
-        ("CASE006", 1, 38, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00"),   
-        ("CASE007", 1, 38, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00"),  
-        ("CASE008", 1, 37, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE009", 1, 37, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE010", 1, 38, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE011", 1, 38, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00")   
-        ]   
+        ("CASE005", 1, 37, None, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00", None),
+        ("CASE005", 2, 37, None, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00", None),
+        ("CASE006", 1, 38, None, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00", None),
+        ("CASE007", 1, 38, None, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00", None),
+        ("CASE008", 1, 37, None, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00", None),
+        ("CASE009", 1, 37, None, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00", None),
+        ("CASE010", 1, 38, None, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00", None),
+        ("CASE011", 1, 38, None, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00", None)
+        ]
 
     loc_schema = T.StructType([
         T.StructField("ListedCentre", T.StringType(), True),

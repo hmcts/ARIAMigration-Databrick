@@ -6,14 +6,21 @@ from pyspark.sql.functions import col
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, TimestampType, BooleanType
 from unittest.mock import patch
 import pytest
+import os
+import time
 
 
 @pytest.fixture(scope="session")
 def spark():
     """Create a Spark session for testing."""
-    return SparkSession.builder \
+    os.environ["TZ"] = "Europe/London"
+    time.tzset()
+
+    spark = SparkSession.builder \
         .appName("appealSubmitted_paymentType") \
         .getOrCreate()
+    spark.conf.set("spark.sql.session.timeZone", "Europe/London")
+    return spark
 
 
 class TestAppealSubmittedPaymentType:

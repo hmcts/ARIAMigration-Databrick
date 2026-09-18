@@ -239,7 +239,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     )
 
     allowed = [30,60,90,120,150,180,210,240,270,300,330,360]
-    # prepare for hearing - hearing response
+    # prepare for hearing - hearing response (for non-listCaseHearing fields)
     df_m3_validation = (
         silver_m3
             .filter(col("CaseStatus").isin(37, 38))
@@ -265,10 +265,24 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             )
     )
 
+    # prepare for hearing - listCaseHearing fields validation (different filter: CaseStatus IN (37,38,26) AND Outcome != 38)
+    df_m3_validation_lc = (
+        silver_m3
+            .filter((col("CaseStatus").isin(37, 38, 26)) & (~(col("Outcome").eqNullSafe(38))))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1).drop("row_number")
+            .select(
+                "CaseNo",
+                col("CaseStatus").alias("listCaseHearing_CaseStatus"),
+                col("Outcome").alias("listCaseHearing_Outcome")
+            )
+    )
+
         
     valid_preparforhearing = (
         silver_m1.select("CaseNo")
             .join(df_m3_validation, on="CaseNo", how="left")
+            .join(df_m3_validation_lc, on="CaseNo", how="left")
             .join(bronze_listing_location
                 .select(col("ListedCentre"), col("locationCode"), col("locationLabel"), col("listCaseHearingCentre").alias("bronze_listCaseHearingCentre"), col("listCaseHearingCentreAddress").alias("bronze_listCaseHearingCentreAddress")),
                 on=col("HearingCentre") == col("ListedCentre"), how="left")

@@ -2,14 +2,21 @@ import pytest
 from pyspark.sql import SparkSession, types as T, Row
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPendingDetained import caseData
 from datetime import date, datetime
+import os
+import time
 
 @pytest.fixture(scope="session")
 def spark():
-    return (
+    os.environ["TZ"] = "Europe/London"
+    time.tzset()
+
+    spark = (
         SparkSession.builder
         .appName("caseDataTests")
         .getOrCreate()
     )
+    spark.conf.set("spark.sql.session.timeZone", "Europe/London")
+    return spark
 
 @pytest.fixture(scope="session")
 def caseData_outputs(spark):

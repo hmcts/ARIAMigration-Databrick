@@ -30,10 +30,28 @@ def test_default_mapping_init(json):
         error_message = str(e)        
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-def test_AREA_defaultValues(test_df, fields_to_exclude):
+def test_AREA_defaultValues(test_df, fields_to_exclude, current_state=None):
     try:
+        _UHOB_NO_STATES = {
+            "awaitingRespondentEvidence(b)", "caseUnderReview", "listing", "prepareForHearing",
+            "decision", "decided(a)", "decided(b)", "ftpaSubmitted(a)", "ftpaSubmitted(b)",
+            "ftpaDecided", "remitted",
+        }
+        _UHOB_NO_ARIA_STATES = {
+            "caseUnderReview", "listing", "prepareForHearing", "decision", "decided",
+            "ftpaSubmitted", "ftpaDecided", "remitted",
+        }
+        _uhob_expected = "Yes"
+        if current_state is not None:
+            if current_state in _UHOB_NO_STATES:
+                _uhob_expected = "No"
+        elif "ariaDesiredState" in test_df.columns:
+            _r = test_df.select("ariaDesiredState").limit(1).collect()
+            if _r and _r[0][0] in _UHOB_NO_ARIA_STATES:
+                _uhob_expected = "No"
+
         expected_defaults = {
-             "uploadHomeOfficeBundleAvailable": "Yes",
+             "uploadHomeOfficeBundleAvailable": _uhob_expected,
              "ariaDesiredState": "awaitingRespondentEvidence"
         }
 

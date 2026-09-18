@@ -29,6 +29,7 @@ def test_default_mapping_init(json):
     try:
         test_df = json.select(
             "uploadHomeOfficeBundleActionAvailable",
+            "uploadHomeOfficeBundleAvailable",
             "respondentDocuments",
             "ariaDesiredState"
         )
@@ -41,6 +42,7 @@ def test_AREB_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
              "uploadHomeOfficeBundleActionAvailable": "No",
+             "uploadHomeOfficeBundleAvailable": "No",
              "ariaDesiredState": "awaitingRespondentEvidence"
         }
 

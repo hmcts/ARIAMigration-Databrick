@@ -590,7 +590,7 @@ def test_paidAmount_test1(test_df):
         acceptance_critera = processed_df.filter(
             (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) & 
             (col("Has_Payment_Tx") > 0) & 
-            (F.abs(col("Total_Amount")).cast("decimal(18,2)") != col("paidAmount").cast("decimal(18,2)"))
+            ((F.abs(col("Total_Amount")) * 100).cast("int").cast("decimal(18,2)") != col("paidAmount").cast("decimal(18,2)"))
         )
 
         if acceptance_critera.count() != 0:
@@ -1043,7 +1043,7 @@ def test_amountLeftToPay_test1(test_df):
             (col("PaymentRemissionGranted") == 1)
         ) & 
         (
-            (col("Total_Amount").cast("decimal(18,2)") != col("amountLeftToPay").cast("decimal(18,2)"))
+            ((col("Total_Amount") * 100).cast("decimal(18,2)") != col("amountLeftToPay").cast("decimal(18,2)"))
         )
         )
 
@@ -1160,7 +1160,7 @@ def test_amountRemitted_test1(test_df):
             (col("PaymentRemissionGranted") == 1)
         ) & 
         (
-            (col("Total_Amount").cast("decimal(18,2)") != col("amountRemitted").cast("decimal(18,2)"))
+            ((col("Total_Amount") * 100).cast("decimal(18,2)") != col("amountRemitted").cast("decimal(18,2)"))
         )
         )
 

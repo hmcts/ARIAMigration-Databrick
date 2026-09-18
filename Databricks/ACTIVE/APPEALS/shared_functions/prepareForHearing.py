@@ -488,7 +488,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         .otherwise(base_hours)
     )
     
-    content_df = (silver_m3_filtered_casestatus.join(silver_m3_listcase_fields, on=col("CaseNo"), how="left")
+    content_df = (silver_m3_filtered_casestatus
         .withColumn(
             "listingLength",
             F.create_map(
@@ -501,16 +501,14 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
                 .otherwise(rounded_minutes).alias("minutes"))
         ).select(
             col("CaseNo").alias("CaseNo"),
-            col("listCaseHearingLength"),
-            col("listCaseHearingDate"),
-            col("listCaseHearingCentre"),
-            col("listCaseHearingCentreAddress"),
             col("TimeEstimate"),
             col("listingLength"),
             col("listingLocation"),
             col("HearingCentre"),
             col("HearingDate"),
-            col("StartTime")
+            col("StartTime"),
+            col("CaseStatus"),
+            col("Outcome")
         )
     )
 
@@ -525,6 +523,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
     df_hearingDetails = (
         silver_m1.alias("m1")
         .join(content_df.alias("m3_content"), ["CaseNo"], "left")
+        .join(silver_m3_listcase_fields.alias("m3_lc_content"), ["CaseNo"], "left")
         .withColumn(
             "hearingChannel",
             F.struct(

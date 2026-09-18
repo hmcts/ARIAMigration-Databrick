@@ -8,11 +8,13 @@ from pyspark.sql import functions as F, types as T
 
 @pytest.fixture(scope="session")
 def spark():
-    return (
+    spark = (
         SparkSession.builder
         .appName("hearingDetailsTests")
         .getOrCreate()
     )
+    spark.conf.set("spark.sql.session.timeZone", "Europe/London")  # All existing tests use local time, change this to UTC on full test refactor
+    return spark
 
 ##### Testing the documents field grouping function #####
 @pytest.fixture(scope="session")
@@ -41,7 +43,13 @@ def hearingDetails_outputs(spark):
         ("CASE009", "AIP", "FT", None, 0, 0, None, 2),    # For m3 conditional tests - Additional Language Sign + Sign
         ("CASE010", "AIP", "FT", None, 0, 0, None, 2),   # For m3 conditional tests - Additional Language Sign + Spoken Manual
         ("CASE011", "AIP", "FT", None, 0, 0, True, 61),    # For m3 conditional tests - Additional Language Sign + Sign Manual
-        ("CASE012", "AIP", "FT", None, 0, 0, True, 61)
+        ("CASE012", "AIP", "FT", None, 0, 0, True, 61),
+        ("CASE013", "AIP", "FT", None, 0, 0, True, 61),
+        ("CASE014", "AIP", "FT", None, 0, 0, True, 61),
+        ("CASE015", "AIP", "FT", None, 0, 0, True, 61),
+        ("CASE016", "AIP", "FT", None, 0, 0, True, 61),
+        ("CASE017", "AIP", "FT", None, 0, 0, True, 61),
+        ("CASE018", "AIP", "FT", None, 0, 0, True, 61)
         ]
 
     
@@ -59,30 +67,30 @@ def hearingDetails_outputs(spark):
 
     m3_data = [
         # Existing test cases - CaseStatus IN (37, 38) with Outcome IS NULL
-        ("CASE005", 1, 37, None, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),
-        ("CASE005", 2, 37, None, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00"),   
-        ("CASE006", 1, 38, None, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00"),   
-        ("CASE007", 1, 38, None, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00"),  
-        ("CASE008", 1, 37, None, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE009", 1, 37, None, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE010", 1, 38, None, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
-        ("CASE011", 1, 38, None, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00"),
-        ("CASE012", 1, 38, None, 0, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00"),
-        
+        ("CASE005", 1, 37, None, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00", None),
+        ("CASE005", 2, 37, None, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00", None),
+        ("CASE006", 1, 38, None, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00", None),
+        ("CASE007", 1, 38, None, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00", None),
+        ("CASE008", 1, 37, None, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00", None),
+        ("CASE009", 1, 37, None, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00", None),
+        ("CASE010", 1, 38, None, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00", None),
+        ("CASE011", 1, 38, None, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00", None),
+        ("CASE012", 1, 38, None, 0, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00", None),
+
         # New test cases for listCaseHearing fields with CaseStatus = 26
         # CASE013: CaseStatus 26, Outcome != 38 (should be INCLUDED in listCaseHearing fields)
-        ("CASE013", 1, 26, 40, 120, "LOC001","2025-06-15T00:00:00.000+00:00","1899-12-30T14:00:00.000+00:00"),
-        
+        ("CASE013", 1, 26, 40, 120, "LOC001","2025-06-15T00:00:00.000+00:00","1899-12-30T14:00:00.000+00:00", None),
+
         # CASE014: CaseStatus 26, Outcome = 38 (should be EXCLUDED from listCaseHearing fields)
-        ("CASE014", 1, 26, 38, 150, "LOC002","2025-07-20T00:00:00.000+00:00","1899-12-30T15:00:00.000+00:00"),
-        
+        ("CASE014", 1, 26, 38, 150, "LOC002","2025-07-20T00:00:00.000+00:00","1899-12-30T15:00:00.000+00:00", None),
+
         # CASE015: Test MAX(StatusId) with multiple rows - highest StatusId has CaseStatus 26, Outcome != 38
-        ("CASE015", 1, 37, None, 90, "LOC003","2025-08-10T00:00:00.000+00:00","1899-12-30T16:00:00.000+00:00"),
-        ("CASE015", 2, 26, 50, 90, "LOC003","2025-09-10T00:00:00.000+00:00","1899-12-30T17:00:00.000+00:00"),
-        
+        ("CASE015", 1, 37, None, 90, "LOC003","2025-08-10T00:00:00.000+00:00","1899-12-30T16:00:00.000+00:00", None),
+        ("CASE015", 2, 26, 50, 90, "LOC003","2025-09-10T00:00:00.000+00:00","1899-12-30T17:00:00.000+00:00", None),
+
         # CASE016: Test MAX(StatusId) - highest StatusId has CaseStatus 26, Outcome = 38 (should be excluded)
-        ("CASE016", 1, 37, None, 180, "LOC004","2025-10-10T00:00:00.000+00:00","1899-12-30T18:00:00.000+00:00"),
-        ("CASE016", 2, 26, 38, 180, "LOC004","2025-11-10T00:00:00.000+00:00","1899-12-30T19:00:00.000+00:00"),
+        ("CASE016", 1, 37, None, 180, "LOC004","2025-10-10T00:00:00.000+00:00","1899-12-30T18:00:00.000+00:00", None),
+        ("CASE016", 2, 26, 38, 180, "LOC004","2025-11-10T00:00:00.000+00:00","1899-12-30T19:00:00.000+00:00", None),
         
         # CASE017: Test DecisionDate fallback - CaseStatus 38 with NULL HearingDate
         ("CASE017", 1, 38, None, 120, "LOC005", None, None, "2024-06-15"),
@@ -389,7 +397,7 @@ def test_listCaseHearingCentre(spark, hearingDetails_outputs):
     assert results["CASE015"]["listCaseHearingCentre"] == "Scot", "CASE015 should use MAX(StatusId)=2 row (LOC003)"
     
     # CASE016: MAX(StatusId)=2 excluded, fallback to StatusId=1
-    assert results["CASE016"]["listCaseHearingCentre"] == "Court4", "CASE016 should use StatusId=1 row (LOC004)"
+    assert results["CASE016"]["listCaseHearingCentre"] == "Cov", "CASE016 should use StatusId=1 row (LOC004)"
 
 
 def test_listCaseHearingCentreAddress(spark, hearingDetails_outputs):
@@ -423,9 +431,9 @@ def test_listCaseHearingDate_DecisionDate_Fallback(spark, hearingDetails_outputs
     
     # CASE018: CaseStatus 38, HearingDate=NULL, StartTime='2024-09-15T10:30:00.000+00:00', DecisionDate='2024-05-20'
     # Should use DecisionDate for date (2024-05-20) with StartTime preserved
-    assert results["CASE018"]["listCaseHearingDate"] == "2024-05-20T10:30:00.000", \
+    assert results["CASE018"]["listCaseHearingDate"] == "2024-05-20T11:30:00.000", \
         f"CASE018 should use DecisionDate (2024-05-20) with StartTime, got {results['CASE018']['listCaseHearingDate']}"
     
     # CASE006: CaseStatus 38 with valid HearingDate - should NOT use DecisionDate fallback
-    assert results["CASE006"]["listCaseHearingDate"] == "2026-12-03T00:00:00.000", \
+    assert results["CASE006"]["listCaseHearingDate"] == "2026-12-03T13:00:00.000", \
         f"CASE006 should use HearingDate since it's not NULL, got {results['CASE006']['listCaseHearingDate']}"

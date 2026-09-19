@@ -164,11 +164,13 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
 
     # appealSubmitted - payment and remission
     lu_ref_txn = (
-        silver_m4.alias("m4").filter(~col("TransactionTypeId").isin(6, 19)).distinct()
-            .select("ReferringTransactionId")
-            .where(col("ReferringTransactionId").isNotNull())
-            .rdd.flatMap(lambda x: x)
-            .collect()
+        row.ReferringTransactionId
+        for row in (
+            silver_m4.alias("m4").filter(~col("TransactionTypeId").isin(6, 19)).distinct()
+                .select("ReferringTransactionId")
+                .where(col("ReferringTransactionId").isNotNull())
+                .collect()
+        )
     ) or []
     valid_payment_type = (
         silver_m1.alias("m1").join(silver_m4.alias("m4"), on=["CaseNo"])
@@ -177,16 +179,18 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                     "m4.Amount", "m4.TransactionId", "m4.ReferringTransactionId", "m4.TransactionTypeId",
                     "m4.Status", "m4.SumBalance", "m4.SumTotalPay", "m4.SumTotalFee"
                 )).alias("valid_transactionList")
-            ).withColumn("lu_ref_txn", lit(lu_ref_txn).cast(ArrayType(LongType())))
+            ).withColumn("lu_ref_txn", array(*[lit(x) for x in lu_ref_txn]).cast(ArrayType(LongType())))
     )
 
     # appealSubmitted - payment and remission
     lu_ref_txn1 = (
-        silver_m4.alias("m4").filter(col("TransactionTypeId").isin(6, 19)).distinct()
-            .select("ReferringTransactionId")
-            .where(col("ReferringTransactionId").isNotNull())
-            .rdd.flatMap(lambda x: x)
-            .collect()
+        row.ReferringTransactionId
+        for row in (
+            silver_m4.alias("m4").filter(col("TransactionTypeId").isin(6, 19)).distinct()
+                .select("ReferringTransactionId")
+                .where(col("ReferringTransactionId").isNotNull())
+                .collect()
+        )
     ) or []
     valid_payment_type1 = (
         silver_m1.alias("m1").join(silver_m4.alias("m4"), on=["CaseNo"])
@@ -195,7 +199,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                     "m4.Amount", "m4.TransactionId", "m4.ReferringTransactionId", "m4.TransactionTypeId",
                     "m4.Status", "m4.SumBalance", "m4.SumTotalPay", "m4.SumTotalFee"
                 )).alias("valid_transactionList1")
-            ).withColumn("lu_ref_txn1", lit(lu_ref_txn1).cast(ArrayType(LongType())))
+            ).withColumn("lu_ref_txn1", array(*[lit(x) for x in lu_ref_txn1]).cast(ArrayType(LongType())))
     )
 
     # case under review and reason for appeal submitted - hearing response

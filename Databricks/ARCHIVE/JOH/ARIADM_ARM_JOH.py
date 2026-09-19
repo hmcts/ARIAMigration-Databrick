@@ -69,6 +69,8 @@
 
 import dlt
 import json
+from pyspark import pipelines as dp
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from datetime import datetime
@@ -142,7 +144,7 @@ spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.c
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Please note that running the DLT pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
+# MAGIC Please note that running the dp pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
 
 # COMMAND ----------
 
@@ -292,33 +294,27 @@ run_id_value = datetime_uuid()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Raw DLT Tables Creation
+# MAGIC ## Raw dp Tables Creation
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="raw_adjudicatorrole",
-    comment="Delta Live Table ARIA AdjudicatorRole.",
-    path=f"{raw_mnt}/Raw_AdjudicatorRole"
-)
+    comment="Delta Live Table ARIA AdjudicatorRole.")
 def Raw_AdjudicatorRole():
     return read_latest_parquet("AdjudicatorRole", "tv_AdjudicatorRole", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
+@dp.table(
     name="raw_adjudicator",
-    comment="Delta Live Table ARIA Adjudicator.",
-    path=f"{raw_mnt}/Raw_Adjudicator"
-)
+    comment="Delta Live Table ARIA Adjudicator.")
 def Raw_Adjudicator():
     return read_latest_parquet("Adjudicator", "tv_Adjudicator", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
+@dp.table(
     name="raw_employmentterm",
-    comment="Delta Live Table ARIA EmploymentTerm.",
-    path=f"{raw_mnt}/Raw_EmploymentTerm"
-)
+    comment="Delta Live Table ARIA EmploymentTerm.")
 def Raw_EmploymentTerm():
     if env_name == "sbox":
         return read_latest_parquet("ARIAEmploymentTerm", "tv_EmploymentTerm", "ARIA_ARM_JOH_ARA")
@@ -326,38 +322,30 @@ def Raw_EmploymentTerm():
         return read_latest_parquet("EmploymentTerm", "tv_EmploymentTerm", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
+@dp.table(
     name="raw_donotusereason",
-    comment="Delta Live Table ARIA DoNotUseReason.",
-    path=f"{raw_mnt}/Raw_DoNotUseReason"
-)
+    comment="Delta Live Table ARIA DoNotUseReason.")
 def Raw_DoNotUseReason():
     return read_latest_parquet("DoNotUseReason", "tv_DoNotUseReason", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
+@dp.table(
     name="raw_johistory",
-    comment="Delta Live Table ARIA JoHistory.",
-    path=f"{raw_mnt}/Raw_JoHistory"
-)
+    comment="Delta Live Table ARIA JoHistory.")
 def Raw_JoHistory():
     return read_latest_parquet("JoHistory", "tv_JoHistory", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
+@dp.table(
     name="raw_othercentre",
-    comment="Delta Live Table ARIA OtherCentre.",
-    path=f"{raw_mnt}/Raw_OtherCentre"
-)
+    comment="Delta Live Table ARIA OtherCentre.")
 def Raw_OtherCentre():
     return read_latest_parquet("OtherCentre", "tv_OtherCentre", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
+@dp.table(
     name="raw_hearingcentre",
-    comment="Delta Live Table ARIA HearingCentre.",
-    path=f"{raw_mnt}/Raw_HearingCentre"
-)
+    comment="Delta Live Table ARIA HearingCentre.")
 def Raw_HearingCentre():
     if env_name == 'sbox':
         return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH_ARA")
@@ -365,20 +353,15 @@ def Raw_HearingCentre():
         return read_latest_parquet("HearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
+@dp.table(
     name="raw_users",
-    comment="Delta Live Table ARIA Users.",
-    path=f"{raw_mnt}/Raw_Users"
-)
+    comment="Delta Live Table ARIA Users.")
 def Raw_Users():
     return read_latest_parquet("Users", "tv_Users", "ARIA_ARM_JOH_ARA")
 
-
-@dlt.table(
+@dp.table(
     name="raw_status",
-    comment="Delta Live Table ARIA Status.",
-    path=f"{raw_mnt}/Raw_Status"
-)
+    comment="Delta Live Table ARIA Status.")
 def Raw_Status():
     return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_JOH_ARA")
 
@@ -387,7 +370,7 @@ def Raw_Status():
 
 # MAGIC
 # MAGIC %md
-# MAGIC ## Bronze DLT Tables Creation
+# MAGIC ## Bronze dp Tables Creation
 
 # COMMAND ----------
 
@@ -451,26 +434,24 @@ def Raw_Status():
 
 from pyspark.sql.functions import col
 
-@dlt.table(
+@dp.table(
     name="bronze_adjudicator_et_hc_dnur",
-    comment="Delta Live Table combining Adjudicator data with Hearing Centre, Employment Terms, and Do Not Use Reason.",
-    path=f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"
-)
+    comment="Delta Live Table combining Adjudicator data with Hearing Centre, Employment Terms, and Do Not Use Reason.")
 def bronze_adjudicator_et_hc_dnur():
     df = (
-        dlt.read("raw_adjudicator").alias("adj")
+        dp.read("raw_adjudicator").alias("adj")
             .join(
-                dlt.read("raw_hearingcentre").alias("hc"),
+                dp.read("raw_hearingcentre").alias("hc"),
                 col("adj.CentreId") == col("hc.CentreId"),
                 "left_outer",
             )
             .join(
-                dlt.read("raw_employmentterm").alias("et"),
+                dp.read("raw_employmentterm").alias("et"),
                 col("adj.EmploymentTerms") == col("et.EmploymentTermId"),
                 "left_outer",
             )
             .join(
-                dlt.read("raw_donotusereason").alias("dnur"),
+                dp.read("raw_donotusereason").alias("dnur"),
                 col("adj.DoNotUseReason") == col("dnur.DoNotUseReasonId"),
                 "left_outer",
             )
@@ -547,15 +528,13 @@ def bronze_adjudicator_et_hc_dnur():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_johistory_users",
-    comment="Delta Live Table combining JoHistory data with Users information.",
-    path=f"{bronze_mnt}/bronze_johistory_users" 
-)
+    comment="Delta Live Table combining JoHistory data with Users information.")
 def bronze_johistory_users():
     df =  (
-        dlt.read("raw_johistory").alias("joh")
-            .join(dlt.read("raw_users").alias("u"), col("joh.UserId") == col("u.UserId"), "left_outer")
+        dp.read("raw_johistory").alias("joh")
+            .join(dp.read("raw_users").alias("u"), col("joh.UserId") == col("u.UserId"), "left_outer")
             .select(
                 col("joh.AdjudicatorId"),
                 col("joh.HistDate"),
@@ -592,17 +571,15 @@ def bronze_johistory_users():
 
 # COMMAND ----------
 
-# DLT Table 1: bronze_othercentre_hearingcentre
-@dlt.table(
+# dp Table 1: bronze_othercentre_hearingcentre
+@dp.table(
     name="bronze_othercentre_hearingcentre",
-    comment="Delta Live Table combining OtherCentre data with HearingCentre information.",
-    path=f"{bronze_mnt}/bronze_othercentre_hearingcentre" 
-)
+    comment="Delta Live Table combining OtherCentre data with HearingCentre information.")
 def bronze_othercentre_hearingcentre():
     df =  (
-        dlt.read("raw_othercentre").alias("oc")
+        dp.read("raw_othercentre").alias("oc")
         .join(
-            dlt.read("raw_hearingcentre").alias("hc"),
+            dp.read("raw_hearingcentre").alias("hc"),
             col("hc.CentreId") == col("oc.CentreId"),
             "left_outer",
         )
@@ -639,15 +616,13 @@ def bronze_othercentre_hearingcentre():
 # COMMAND ----------
 
 
-# DLT Table 2: bronze_adjudicator_role
-@dlt.table(
+# dp Table 2: bronze_adjudicator_role
+@dp.table(
     name="bronze_adjudicator_role",
-    comment="Delta Live Table for Adjudicator Role data.",
-    path=f"{bronze_mnt}/bronze_adjudicator_role" 
-)
+    comment="Delta Live Table for Adjudicator Role data.")
 def bronze_adjudicator_role():
     df =  (
-        dlt.read("raw_adjudicatorrole").alias("adjr")
+        dp.read("raw_adjudicatorrole").alias("adjr")
         .select(
             col("adjr.AdjudicatorId"),
             col("adjr.Role"),
@@ -670,14 +645,13 @@ def bronze_adjudicator_role():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_status",
-    comment="Delta Live Table for Status data used to determine the latest decision date associated with an Adjudicator.",
-    path=f"{bronze_mnt}/bronze_status"
+    comment="Delta Live Table for Status data used to determine the latest decision date associated with an Adjudicator."
 )
 def bronze_status():
     df = (
-        dlt.read("raw_status").alias("st")
+        dp.read("raw_status").alias("st")
         .select(
             col("st.AdjudicatorId"),
             col("st.DeterminationBy"),
@@ -694,7 +668,7 @@ def bronze_status():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Segmentation DLT Tables Creation - stg_joh_filtered
+# MAGIC ## Segmentation dp Tables Creation - stg_joh_filtered
 # MAGIC Segmentation query (to be applied in silver):
 # MAGIC
 # MAGIC ```sql
@@ -750,13 +724,12 @@ def bronze_status():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="stg_joh_filtered",
-    comment="Delta Live silver Table segmentation with judges only using bronze_adjudicator_et_hc_dnur, filtered by role and 7-year retention window.",
-    path=f"{silver_mnt}/stg_joh_filtered"
+    comment="Delta Live silver Table segmentation with judges only using bronze_adjudicator_et_hc_dnur, filtered by role and 7-year retention window."
 )
 def stg_joh_filtered():
-    status = dlt.read("bronze_status")
+    status = dp.read("bronze_status").alias("s")
 
     all_statuses = (
         status.filter(col("AdjudicatorId").isNotNull())
@@ -796,9 +769,9 @@ def stg_joh_filtered():
     seven_years_ago = add_months(current_date(), -84)
 
     df = (
-        dlt.read("bronze_adjudicator_et_hc_dnur").alias("a")
+        dp.read("bronze_adjudicator_et_hc_dnur").alias("a")
         .join(
-            dlt.read("bronze_adjudicator_role").alias("jr"),
+            dp.read("bronze_adjudicator_role").alias("jr"),
             col("a.AdjudicatorId") == col("jr.AdjudicatorId"),
             "left"
         )
@@ -821,7 +794,7 @@ def stg_joh_filtered():
 
 # MAGIC
 # MAGIC %md
-# MAGIC ## Silver DLT Tables Creation
+# MAGIC ## Silver dp Tables Creation
 
 # COMMAND ----------
 
@@ -832,14 +805,12 @@ def stg_joh_filtered():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_adjudicator_detail",
-    comment="Delta Live Silver Table for Adjudicator details enhanced with Hearing Centre and DNUR information.",
-    path=f"{silver_mnt}/silver_adjudicator_detail"
-)
+    comment="Delta Live Silver Table for Adjudicator details enhanced with Hearing Centre and DNUR information.")
 def silver_adjudicator_detail():
     df =  (
-        dlt.read("bronze_adjudicator_et_hc_dnur").alias("adj").join(dlt.read("stg_joh_filtered").alias('flt'), col("adj.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
+        dp.read("bronze_adjudicator_et_hc_dnur").alias("adj").join(dp.read("stg_joh_filtered").alias('flt'), col("adj.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
             col("adj.AdjudicatorId"),
             col("adj.Surname"),
             col("adj.Forenames"),
@@ -916,14 +887,12 @@ def silver_adjudicator_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_history_detail",
-    comment="Delta Live Silver Table combining JoHistory data with Users information.",
-    path=f"{silver_mnt}/silver_history_detail"
-)
+    comment="Delta Live Silver Table combining JoHistory data with Users information.")
 def silver_history_detail():
     df = (
-        dlt.read("bronze_johistory_users").alias("his").join(dlt.read("stg_joh_filtered").alias('flt'), col("his.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
+        dp.read("bronze_johistory_users").alias("his").join(dp.read("stg_joh_filtered").alias('flt'), col("his.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
             col('his.AdjudicatorId'),
             col('his.HistDate'),
             when(col("his.HistType") == 1, "Adjournment")
@@ -997,13 +966,11 @@ def silver_history_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_othercentre_detail",
-    comment="Delta Live silver Table combining OtherCentre data with HearingCentre information.",
-    path=f"{silver_mnt}/silver_othercentre_detail"
-)
+    comment="Delta Live silver Table combining OtherCentre data with HearingCentre information.")
 def silver_othercentre_detail():
-    df = (dlt.read("bronze_othercentre_hearingcentre").alias("hc").join(dlt.read("stg_joh_filtered").alias('flt'), col("hc.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select("hc.*"))
+    df = (dp.read("bronze_othercentre_hearingcentre").alias("hc").join(dp.read("stg_joh_filtered").alias('flt'), col("hc.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select("hc.*"))
 
     return df
 
@@ -1016,14 +983,12 @@ def silver_othercentre_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_appointment_detail",
-    comment="Delta Live Silver Table for Adjudicator Role data.",
-    path=f"{silver_mnt}/silver_appointment_detail"
-)
+    comment="Delta Live Silver Table for Adjudicator Role data.")
 def silver_appointment_detail():
     df = (
-        dlt.read("bronze_adjudicator_role").alias("rol").join(dlt.read("stg_joh_filtered").alias('flt'), col("rol.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
+        dp.read("bronze_adjudicator_role").alias("rol").join(dp.read("stg_joh_filtered").alias('flt'), col("rol.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
             col('rol.AdjudicatorId'),
             when(col("rol.Role") == 2, "Chairman")
             .when(col("rol.Role") == 5, "Adjudicator")
@@ -1145,13 +1110,11 @@ def silver_appointment_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_archive_metadata",
-    comment="Delta Live Silver Table for Archive Metadata data.",
-    path=f"{silver_mnt}/silver_archive_metadata"
-)
+    comment="Delta Live Silver Table for Archive Metadata data.")
 def silver_archive_metadata():
-    status = dlt.read("bronze_status")
+    status = dp.read("bronze_status")
 
     all_statuses = (
         status.filter(col("AdjudicatorId").isNotNull())
@@ -1182,9 +1145,9 @@ def silver_archive_metadata():
 
     # Read and join
     df_base = (
-        dlt.read("silver_adjudicator_detail").alias("adj")
+        dp.read("silver_adjudicator_detail").alias("adj")
         .join(
-            dlt.read("stg_joh_filtered").alias("flt"),
+            dp.read("stg_joh_filtered").alias("flt"),
             col("adj.AdjudicatorId") == col("flt.AdjudicatorId"),
             "inner"
         )
@@ -1238,7 +1201,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Silver DLT staging table for gold transformation
+# MAGIC ## Silver dp staging table for gold transformation
 
 # COMMAND ----------
 
@@ -1431,19 +1394,17 @@ generate_a360_udf = udf(generate_a360, StringType())
 # COMMAND ----------
 
 # DBTITLE 1,Transformation stg_judicial_officer_combined
-@dlt.table(
+@dp.table(
     name="stg_judicial_officer_combined",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_judicial_officer_combined"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_judicial_officer_combined():
 
-    df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history = dlt.read("silver_history_detail")
+    df_judicial_officer_details = dp.read("silver_adjudicator_detail")
+    df_other_centres = dp.read("silver_othercentre_detail")
+    df_roles = dp.read("silver_appointment_detail")
+    df_history = dp.read("silver_history_detail")
 
-    df_joh_metadata = dlt.read("silver_archive_metadata")
+    df_joh_metadata = dp.read("silver_archive_metadata")
 
 
     # Aggregate Other Centres
@@ -1478,14 +1439,12 @@ def stg_judicial_officer_combined():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation  stg_create_joh_json_content
-@dlt.table(
+@dp.table(
     name="stg_create_joh_json_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_create_joh_json_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_create_joh_json_content():
 
-    df_combined = dlt.read("stg_judicial_officer_combined")
+    df_combined = dp.read("stg_judicial_officer_combined")
 
     df = df_combined.withColumn("JSON_Content", to_json(struct(*df_combined.columns))) \
                     .withColumn("File_Name", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
@@ -1501,14 +1460,12 @@ def stg_create_joh_json_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation stg_create_joh_iris_html_content
-@dlt.table(
+@dp.table(
     name="stg_create_joh_html_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_create_joh_html_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_create_joh_html_content():
 
-    df_combined = dlt.read("stg_judicial_officer_combined")
+    df_combined = dp.read("stg_judicial_officer_combined")
 
     df = df_combined.withColumn("HTML_Content", generate_html_udf(struct(*df_combined.columns))) \
                         .withColumn("File_Name", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
@@ -1522,14 +1479,12 @@ def stg_create_joh_html_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation stg_create_joh_a360_content
-@dlt.table(
+@dp.table(
     name="stg_create_joh_a360_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_create_joh_a360_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_create_joh_a360_content():
 
-    df_td_metadata = dlt.read("silver_archive_metadata")
+    df_td_metadata = dp.read("silver_archive_metadata")
 
     # Generate A360 content and associated file names
     df = df_td_metadata.withColumn(
@@ -1545,20 +1500,18 @@ def stg_create_joh_a360_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation stg_judicial_officer_unified
-@dlt.table(
+@dp.table(
     name="stg_judicial_officer_unified",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_judicial_officer_unified"
-)
-@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
+    comment="Delta Live unified stage Gold Table for gold outputs.")
+@dp.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
+@dp.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
+@dp.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
 def stg_judicial_officer_unified():
 
-    # Read DLT sources
-    a360_df = dlt.read("stg_create_joh_a360_content").alias("a360")
-    html_df = dlt.read("stg_create_joh_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status").alias("html")
-    json_df = dlt.read("stg_create_joh_json_content").alias("json")
+    # Read dp sources
+    a360_df = dp.read("stg_create_joh_a360_content").alias("a360")
+    html_df = dp.read("stg_create_joh_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status").alias("html")
+    json_df = dp.read("stg_create_joh_json_content").alias("json")
 
     df_unified = (
         html_df
@@ -1608,15 +1561,13 @@ checks = {}
 checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
 
 
-@dlt.table(
+@dp.table(
     name="gold_judicial_officer_with_html",
-    comment="Delta Live Gold Table with HTML content and uploads.",
-    path=f"{gold_mnt}/gold_judicial_officer_with_html"
-)
-@dlt.expect_all_or_fail(checks)
+    comment="Delta Live Gold Table with HTML content and uploads.")
+@dp.expect_all_or_fail(checks)
 def gold_judicial_officer_with_html():
     # Load source data
-    df_combined = dlt.read("stg_judicial_officer_unified")
+    df_combined = dp.read("stg_judicial_officer_unified")
 
     # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
@@ -1633,17 +1584,15 @@ def gold_judicial_officer_with_html():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_judicial_officer_with_json
-@dlt.table(
+@dp.table(
     name="gold_judicial_officer_with_json",
-    comment="Delta Live Gold Table with JSON content.",
-    path=f"{gold_mnt}/gold_judicial_officer_with_json"
-)
+    comment="Delta Live Gold Table with JSON content.")
 def gold_judicial_officer_with_json():
     """
     Delta Live Table for creating and uploading JSON content for judicial officers.
     """
     # Load source data
-    df_combined = dlt.read("stg_judicial_officer_unified")
+    df_combined = dp.read("stg_judicial_officer_unified")
     
 
     # Repartition to optimize parallelism
@@ -1663,14 +1612,12 @@ def gold_judicial_officer_with_json():
 checks = {}
 checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 
-@dlt.table(
+@dp.table(
     name="gold_judicial_officer_with_a360",
-    comment="Delta Live Gold Table with A360 content.",
-    path=f"{gold_mnt}/gold_judicial_officer_with_a360"
-)
-@dlt.expect_all_or_fail(checks)
+    comment="Delta Live Gold Table with A360 content.")
+@dp.expect_all_or_fail(checks)
 def gold_judicial_officer_with_a360():
-    df_a360 = dlt.read("stg_judicial_officer_unified")
+    df_a360 = dp.read("stg_judicial_officer_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \

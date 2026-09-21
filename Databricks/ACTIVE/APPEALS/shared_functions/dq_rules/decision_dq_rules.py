@@ -65,6 +65,7 @@ class decisionDQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
+        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'decision')"
 
         checks["valid_hmcts"] = ("(hmcts <=> '[userImage:hmcts.png]')")
 
@@ -73,6 +74,26 @@ class decisionDQRules(DQRulesBase):
         checks["valid_bundleConfiguration"] = ("(bundleConfiguration <=> 'iac-hearing-bundle-config.yaml')")
 
         checks["valid_decisionAndReasonsAvailable"] = ("(decisionAndReasonsAvailable <=> 'No')")
+
+        checks["valid_sendDirectionActionAvailable"] = ("(sendDirectionActionAvailable <=> 'No')")
+
+        checks["valid_changeDirectionDueDateActionAvailable"] = ("(changeDirectionDueDateActionAvailable <=> 'No')")
+
+        checks["valid_markEvidenceAsReviewedActionAvailable"] = ("(markEvidenceAsReviewedActionAvailable <=> 'No')")
+
+        checks["valid_uploadAdditionalEvidenceActionAvailable"] = ("(uploadAdditionalEvidenceActionAvailable <=> 'No')")
+
+        checks["valid_uploadAdditionalEvidenceHomeOfficeActionAvailable"] = ("(uploadAdditionalEvidenceHomeOfficeActionAvailable <=> 'No')")
+
+        checks["valid_uploadAddendumEvidenceActionAvailable"] = ("(uploadAddendumEvidenceActionAvailable <=> 'Yes')")
+
+        checks["valid_markAddendumEvidenceAsReviewedActionAvailable"] = ("(markAddendumEvidenceAsReviewedActionAvailable <=> 'Yes')")
+
+        checks["valid_uploadAddendumEvidenceLegalRepActionAvailable"] = ("(uploadAddendumEvidenceLegalRepActionAvailable <=> 'Yes')")
+
+        checks["valid_uploadAddendumEvidenceHomeOfficeActionAvailable"] = ("(uploadAddendumEvidenceHomeOfficeActionAvailable <=> 'Yes')")
+
+        checks["valid_uploadAddendumEvidenceAdminOfficerActionAvailable"] = ("(uploadAddendumEvidenceAdminOfficerActionAvailable <=> 'Yes')")
 
         return checks
 

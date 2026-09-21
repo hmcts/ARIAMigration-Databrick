@@ -36,4 +36,20 @@ class reasonsForAppealSubmittedDQRules(DQRulesBase):
             """
         )
 
+        checks["valid_markEvidenceAsReviewedActionAvailable"] = "(markEvidenceAsReviewedActionAvailable <=> 'Yes')"
+
+        checks["valid_uploadAdditionalEvidenceActionAvailable"] = "(uploadAdditionalEvidenceActionAvailable <=> 'Yes')"
+
+        checks["valid_uploadAdditionalEvidenceHomeOfficeActionAvailable"] = "(uploadAdditionalEvidenceHomeOfficeActionAvailable <=> 'Yes')"
+
+        checks["valid_reasonsForAppealDecision"] = (
+            """(
+                (dv_representation <=> 'AIP' AND reasonsForAppealDecision <=> 'This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.')
+                OR
+                (NOT(dv_representation <=> 'AIP') AND reasonsForAppealDecision IS NULL)
+            )"""
+        )
+
+        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'reasonsForAppealSubmitted')"
+
         return checks

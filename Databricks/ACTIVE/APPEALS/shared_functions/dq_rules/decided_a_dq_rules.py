@@ -134,8 +134,14 @@ class decidedADQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
+        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'decided')"
 
         checks["valid_appealDecisionAvailable"] = ("(appealDecisionAvailable <=> 'Yes')")
+
+        checks["valid_haveHearingAttendeesAndDurationBeenRecorded"] = ("(haveHearingAttendeesAndDurationBeenRecorded <=> 'Yes')")
+
+        # decisionAndReasonsAvailable is dropped from decided(a) onwards; override the rule inherited from decision to assert it is NULL.
+        checks["valid_decisionAndReasonsAvailable"] = ("(decisionAndReasonsAvailable IS NULL)")
 
         return checks
 

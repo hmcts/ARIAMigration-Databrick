@@ -465,10 +465,67 @@ class appealSubmittedDQRules(DQRulesBase):
 
         checks["valid_completeCaseReviewDate"] = (
             """(
-                NOT (ariaDesiredState <=> 'appealSubmitted' OR ariaDesiredState <=> 'paymentPending')
+                NOT (ariaDesiredState <=> 'appealSubmitted' OR ariaDesiredState <=> 'pendingPayment')
                 OR
                 completeCaseReviewDate <=> date_format(DateLodged, 'yyyy-MM-dd')
             )"""
         )
+
+        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'appealSubmitted')"
+
+        # homeOfficeDetails: only populated for PA / RP appeals
+        ho_conditions = "COALESCE(dv_CCDAppealType IN ('PA', 'RP'), FALSE)"
+
+        checks["valid_homeOfficeSearchStatus"] = (
+            f"(({ho_conditions} AND homeOfficeSearchStatus <=> 'SUCCESS') OR (NOT {ho_conditions} AND homeOfficeSearchStatus IS NULL))"
+        )
+
+        checks["valid_homeOfficeSearchNoMatch"] = (
+            f"(({ho_conditions} AND homeOfficeSearchNoMatch <=> 'NO_MATCH') OR (NOT {ho_conditions} AND homeOfficeSearchNoMatch IS NULL))"
+        )
+
+        checks["valid_matchingAppellantDetailsFound"] = (
+            f"(({ho_conditions} AND matchingAppellantDetailsFound <=> 'No') OR (NOT {ho_conditions} AND matchingAppellantDetailsFound IS NULL))"
+        )
+
+        checks["valid_homeOfficeAppellantsList"] = f"""
+            (
+                (
+                    {ho_conditions}
+                    AND homeOfficeAppellantsList.value.code <=> 'NoMatch'
+                    AND homeOfficeAppellantsList.value.label <=> 'No Match'
+                    AND size(homeOfficeAppellantsList.list_items) = 1
+                    AND homeOfficeAppellantsList.list_items[0].code <=> 'NoMatch'
+                    AND homeOfficeAppellantsList.list_items[0].label <=> 'No Match'
+                )
+                OR
+                (NOT {ho_conditions} AND homeOfficeAppellantsList IS NULL)
+            )
+        """
+
+        checks["valid_homeOfficeCaseStatusData"] = f"""
+            (
+                (
+                    {ho_conditions}
+                    AND homeOfficeCaseStatusData.applicationStatus.roleSubType.code <=> 'No match'
+                    AND homeOfficeCaseStatusData.applicationStatus.roleType.code <=> 'No match'
+                    AND size(homeOfficeCaseStatusData.applicationStatus.ccdHomeOfficeMetadata) = 0
+                    AND size(homeOfficeCaseStatusData.applicationStatus.ccdRejectionReasons) = 0
+                    AND homeOfficeCaseStatusData.displayAppellantDetailsTitle <=> '<h2>Appellant details</h2>'
+                    AND homeOfficeCaseStatusData.displayApplicationDetailsTitle <=> '<h2>Application details</h2>'
+                    AND homeOfficeCaseStatusData.displayDateOfBirth <=> 'No match'
+                    AND homeOfficeCaseStatusData.person.fullName <=> 'No match'
+                    AND homeOfficeCaseStatusData.person.familyName <=> 'No match'
+                    AND homeOfficeCaseStatusData.person.givenName <=> 'No match'
+                    AND homeOfficeCaseStatusData.person.gender.code <=> 'No match'
+                    AND homeOfficeCaseStatusData.person.nationality.code <=> 'No match'
+                    AND homeOfficeCaseStatusData.person.dayOfBirth <=> 0
+                    AND homeOfficeCaseStatusData.person.monthOfBirth <=> 0
+                    AND homeOfficeCaseStatusData.person.yearOfBirth <=> 0
+                )
+                OR
+                (NOT {ho_conditions} AND homeOfficeCaseStatusData IS NULL)
+            )
+        """
 
         return checks

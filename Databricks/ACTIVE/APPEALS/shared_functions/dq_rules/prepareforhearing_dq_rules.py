@@ -5,8 +5,14 @@ class prepareForHearingDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_hearing_response()
+        checks = checks | self.get_checks_case_state()
         checks = checks | self.get_checks_hearing_details()
         checks = checks | self.get_checks_document()
+
+        return checks
+
+    def get_checks_case_state(self, checks={}):
+        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'prepareForHearing')"
 
         return checks
 

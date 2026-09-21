@@ -71,8 +71,21 @@ class ftpaSubmittedADQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
+        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'ftpaSubmitted')"
 
         checks["valid_isFtpaListVisible"] = ("(isFtpaListVisible <=> 'Yes')")
+
+        checks["valid_uploadAddendumEvidenceActionAvailable"] = ("(uploadAddendumEvidenceActionAvailable <=> 'No')")
+
+        checks["valid_markAddendumEvidenceAsReviewedActionAvailable"] = ("(markAddendumEvidenceAsReviewedActionAvailable <=> 'No')")
+
+        checks["valid_uploadAddendumEvidenceLegalRepActionAvailable"] = ("(uploadAddendumEvidenceLegalRepActionAvailable <=> 'No')")
+
+        checks["valid_uploadAddendumEvidenceHomeOfficeActionAvailable"] = ("(uploadAddendumEvidenceHomeOfficeActionAvailable <=> 'No')")
+
+        checks["valid_uploadAddendumEvidenceAdminOfficerActionAvailable"] = ("(uploadAddendumEvidenceAdminOfficerActionAvailable <=> 'No')")
+
+        checks["valid_uploadHomeOfficeAppealResponseActionAvailable"] = ("(uploadHomeOfficeAppealResponseActionAvailable <=> 'Yes')")
 
         return checks
 

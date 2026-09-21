@@ -464,6 +464,8 @@ class listingDQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
+        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'listing')"
+
         checks["valid_appealReviewOutcome"] = (
             "(appealReviewOutcome <=> 'decisionMaintained')"
         )

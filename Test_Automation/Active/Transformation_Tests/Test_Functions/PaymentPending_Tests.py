@@ -2224,7 +2224,7 @@ def test_mobileNumber_ac2(json, M2_bronze):
         return TestResult("mobileNumber", "FAIL","NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
 #######################
-#oocAppealAdminJ - If CategoryId is not in 38 and oocAppealAdminJ not omitted
+#oocAppealAdminJ - appealOutOfCountry is 'No' and oocAppealAdminJ not omitted
 #######################
 def test_oocAppealAdminJ_ac1(test_df):
     try:
@@ -2246,49 +2246,48 @@ def test_oocAppealAdminJ_ac1(test_df):
         return TestResult("oocAppealAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#oocAppealAdminJ - If CategoryId is in 38 + CleansedHORef LIKE '%GWF%'  and  oocAppealAdminJ != ‘entryClearanceDecision’
+#oocAppealAdminJ - If appealOutOfCountry is 'Yes' + CleansedHORef LIKE '%GWF%'  and  oocAppealAdminJ != ‘entryClearanceDecision’
 #######################
 def test_oocAppealAdminJ_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
             (col("HORef_Cleansed").contains("GWF"))
             ).count() == 0:
             return TestResult("oocAppealAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac_oocAppealAdminJ = test_df.filter(
         (
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
             (col("HORef_Cleansed").contains("GWF"))
         ) &
             (~col("oocAppealAdminJ").eqNullSafe("entryClearanceDecision"))
         )
 
         if ac_oocAppealAdminJ.count() != 0:
-            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where CategoryId is 38 + lu_HORef (CleansedHORef) LIKE '%GWF%' and oocAppealAdminJ != 'entryClearanceDecision'." , test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where appealOutOfCountry is 'Yes' + lu_HORef (CleansedHORef) LIKE '%GWF%' and oocAppealAdminJ != 'entryClearanceDecision'." , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed: where CategoryId is 38 + lu_HORef (CleansedHORef) LIKE '%GWF%', oocAppealAdminJ = 'entryClearanceDecision'.", test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed: where appealOutOfCountry is 'Yes' + lu_HORef (CleansedHORef) LIKE '%GWF%', oocAppealAdminJ = 'entryClearanceDecision'.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("oocAppealAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#oocAppealAdminJ - If CategoryId is in 38 + M1.HORef  LIKE '%GWF%'  and  oocAppealAdminJ != ‘entryClearanceDecision’
+#oocAppealAdminJ - If appealOutOfCountry is 'Yes' + M1.HORef  LIKE '%GWF%'  and  oocAppealAdminJ != ‘entryClearanceDecision’
 #######################
 def test_oocAppealAdminJ_ac3(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (col("appealOutOfCountry") == "Yes") &
-            (col("HORef").isNotNull()) & (trim(col("HORef")) != "")
+            (col("appealOutOfCountry") == "Yes") & (col("HORef").contains("GWF"))
             ).count() == 0:
             return TestResult("oocAppealAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_oocAppealAdminJ = test_df.filter(
         (
             (col("appealOutOfCountry") == "Yes") &
-            (col("HORef").isNotNull()) & (trim(col("HORef")) != "")
+            (col("HORef").contains("GWF"))
         ) & 
             (col("oocAppealAdminJ") != "entryClearanceDecision")
         )
@@ -2302,35 +2301,35 @@ def test_oocAppealAdminJ_ac3(test_df):
         return TestResult("oocAppealAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#oocAppealAdminJ - If CategoryId is in 38 + M2.FCONumber LIKE '%GWF%'  and  oocAppealAdminJ != ‘entryClearanceDecision’
+#oocAppealAdminJ - If appealOutOfCountry = Yes + M2.FCONumber LIKE '%GWF%'  and  oocAppealAdminJ != ‘entryClearanceDecision’
 #######################
 def test_oocAppealAdminJ_ac4(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
             ((col("FCONumber_Cleansed").contains("GWF")))
             ).count() == 0:
             return TestResult("oocAppealAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_oocAppealAdminJ = test_df.filter(
         (
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
             ((col("FCONumber_Cleansed").contains("GWF")))
         ) & 
             (col("oocAppealAdminJ") != "entryClearanceDecision")
         )       
 
         if ac_oocAppealAdminJ.count() != 0:
-            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where CategoryId is 38 + M2.FCONumber contains GWF and oocAppealAdminJ != entryClearanceDecision" , test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where appealOutOfCountry = Yes + M2.FCONumber contains GWF and oocAppealAdminJ != entryClearanceDecision" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed, where CategoryId is 38 and M2.FCONumber contains GWF, oocAppealAdminJ = entryClearanceDecision.", test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed, where appealOutOfCountry = Yes and M2.FCONumber contains GWF, oocAppealAdminJ = entryClearanceDecision.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("oocAppealAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#oocAppealAdminJ - If CategoryId is in 38 + CleansedHORef NOT LIKE '%GWF%'  or M1.HORef  NOT LIKE '%GWF%' or M2.FCONumber LIKE '%GWF%' & oocAppealAdminJ != ‘None
+#oocAppealAdminJ - If appealOutOfCountry is 'Yes' + CleansedHORef NOT LIKE '%GWF%'  or M1.HORef  NOT LIKE '%GWF%' or M2.FCONumber LIKE '%GWF%' & oocAppealAdminJ != ‘None
 #######################
 def test_oocAppealAdminJ_ac5(test_df):
     try:
@@ -2341,20 +2340,20 @@ def test_oocAppealAdminJ_ac5(test_df):
         )
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) & no_gwf
+            (col("appealOutOfCountry") == "Yes") & no_gwf
             ).count() == 0:
             return TestResult("oocAppealAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac_oocAppealAdminJ = test_df.filter(
-        (array_contains(col("CategoryIds"), 38)) &
+        (col("appealOutOfCountry") == "Yes") &
         no_gwf &
         (~col("oocAppealAdminJ").eqNullSafe("none"))
         )
 
         if ac_oocAppealAdminJ.count() != 0:
-            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where CategoryId is in 38 + no GWF ref on lu_HORef / M1.HORef / M2.FCONumber and oocAppealAdminJ != 'none'" , test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where appealOutOfCountry is 'Yes' + no GWF ref on lu_HORef / M1.HORef / M2.FCONumber and oocAppealAdminJ != 'none'" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed, where CategoryId is in 38 + no GWF ref on lu_HORef / M1.HORef / M2.FCONumber, oocAppealAdminJ = 'none'.", test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed, where appealOutOfCountry is 'Yes' + no GWF ref on lu_HORef / M1.HORef / M2.FCONumber, oocAppealAdminJ = 'none'.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("oocAppealAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

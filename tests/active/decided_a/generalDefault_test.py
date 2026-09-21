@@ -38,4 +38,18 @@ def test_appealDecisionAvailable(spark,generalDefault_outputs):
     assert results["CASE002"]["appealDecisionAvailable"] == "Yes"
     assert results["CASE003"]["appealDecisionAvailable"] == "Yes"
 
+def test_haveHearingAttendeesAndDurationBeenRecorded(spark,generalDefault_outputs):
 
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["haveHearingAttendeesAndDurationBeenRecorded"] == "Yes"
+    assert results["CASE002"]["haveHearingAttendeesAndDurationBeenRecorded"] == "Yes"
+    assert results["CASE003"]["haveHearingAttendeesAndDurationBeenRecorded"] == "Yes"
+
+def test_decisionAndReasonsAvailable_dropped(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert "decisionAndReasonsAvailable" not in results["CASE001"]
+    assert "decisionAndReasonsAvailable" not in results["CASE002"]
+    assert "decisionAndReasonsAvailable" not in results["CASE003"]

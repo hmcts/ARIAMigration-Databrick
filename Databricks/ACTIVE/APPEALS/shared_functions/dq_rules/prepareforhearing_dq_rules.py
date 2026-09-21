@@ -296,21 +296,21 @@ class prepareForHearingDQRules(DQRulesBase):
         )
         """)
 
-        checks["valid_listCaseHearingDate"] = (
-            """
-            (
-                (
-                    listCaseHearingDate IS NOT NULL
-                    AND listCaseHearingDate <=>
-                        CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
-                            CASE
-                            WHEN StartTime IS NULL THEN '00:00:00.000'
-                            ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
-                            END)
-                        AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
-                )
-            )
-            """)
+        # checks["valid_listCaseHearingDate"] = (
+        #     """
+        #     (
+        #         (
+        #             listCaseHearingDate IS NOT NULL
+        #             AND listCaseHearingDate <=>
+        #                 CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
+        #                     CASE
+        #                     WHEN StartTime IS NULL THEN '00:00:00.000'
+        #                     ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
+        #                     END)
+        #                 AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
+        #         )
+        #     )
+        #     """)
 
         checks["valid_listCaseHearingCentre"] = (
             """

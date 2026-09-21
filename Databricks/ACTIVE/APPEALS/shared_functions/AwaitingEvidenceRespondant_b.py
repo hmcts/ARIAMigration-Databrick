@@ -6,13 +6,11 @@ from . import AwaitingEvidenceRespondant_a as AERa
 def generalDefault(silver_m1): 
     df_generalDefault = AERa.generalDefault(silver_m1)
 
-    df_generalDefault = df_generalDefault.drop("uploadHomeOfficeBundleAvailable")
-
     df_generalDefault = (
         df_generalDefault
         .select("*",
-                lit("No").alias("uploadHomeOfficeBundleActionAvailable"),
-                lit("No").alias("uploadHomeOfficeBundleAvailable"))
+                lit("No").alias("uploadHomeOfficeBundleActionAvailable"))
+        .withColumn("uploadHomeOfficeBundleAvailable", lit("No"))
     )
 
     return df_generalDefault

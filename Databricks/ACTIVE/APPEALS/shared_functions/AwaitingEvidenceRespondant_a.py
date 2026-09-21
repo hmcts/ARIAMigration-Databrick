@@ -193,6 +193,7 @@ def generalDefault(silver_m1):
         df_generalDefault.select("*",
                                  lit([]).cast("array<string>").alias('directions'),
                                  lit("Yes").alias("uploadHomeOfficeBundleAvailable"))
+                                 .withColumn("changeDirectionDueDateActionAvailable", lit("Yes"))
     )
 
     return df_generalDefault

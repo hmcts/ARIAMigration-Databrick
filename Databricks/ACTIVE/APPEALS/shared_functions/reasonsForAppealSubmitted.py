@@ -217,15 +217,12 @@ def generalDefault(silver_m1):
             .drop(col("dv_representation"))
     )
 
-    df_generalDefault = df_generalDefault.withColumn("changeDirectionDueDateActionAvailable", lit("Yes")
-                                        ).withColumn("markEvidenceAsReviewedActionAvailable", lit("Yes")
+    df_generalDefault = df_generalDefault.withColumn("markEvidenceAsReviewedActionAvailable", lit("Yes")
                                         ).withColumn("uploadAdditionalEvidenceActionAvailable", lit("Yes")
-                                        ).withColumn("uploadAdditionalEvidenceHomeOfficeActionAvailable",lit("Yes")
-                                        ).withColumn("uploadHomeOfficeBundleAvailable", lit("Yes")
+                                        ).withColumn("uploadAdditionalEvidenceHomeOfficeActionAvailable", lit("Yes")
                                 
                 ).select('*',
-                # lit("No").alias("uploadHomeOfficeBundleActionAvailable"),
-                lit("This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.").alias("reasonsForAppealDecision")
+                    lit("This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.").alias("reasonsForAppealDecision")
                 ).distinct()
 
     return df_generalDefault

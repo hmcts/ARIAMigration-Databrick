@@ -15,5 +15,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ARCHIVE/SBAIL/Dynamic-ARIA-Scottish-Bails v2"
-      target: aria_s_bails
+      catalog: aria_${bundle.target}
+      schema: aria_s_bails
       development: true

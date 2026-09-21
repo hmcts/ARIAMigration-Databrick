@@ -14,5 +14,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_CASE_UNDER_REVIEW_JSON"
-      target: caseUnderReview_gold
+      catalog: aria_${bundle.target}
+      schema: caseUnderReview_gold
       development: true

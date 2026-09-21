@@ -14,5 +14,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_PREPARE_FOR_HEARING_JSON"
-      target: prepareforhearing_gold
+      catalog: aria_${bundle.target}
+      schema: prepareforhearing_gold
       development: true

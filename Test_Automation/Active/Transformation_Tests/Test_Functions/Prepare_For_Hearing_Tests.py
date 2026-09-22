@@ -773,6 +773,7 @@ def test_hearingDetails_init2(json, M3_bronze, bll):
             "CaseStatus",
             "HearingCentre",
             "HearingDate",
+            "DecisionDate",
             "StartTime",
             "StatusId"
         )
@@ -840,7 +841,7 @@ def test_listCaseHearingLength(test_df):
 def test_listCaseHearingDate(test_df):
     try:
         # Filter where CaseStatus is 37/38
-        target_records = test_df.filter(col("CaseStatus").isin(37, 38))
+        target_records = test_df.filter(col("CaseStatus").isin(37, 38, 26))
 
         if target_records.count() == 0:
             return TestResult("listCaseHearingDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
@@ -851,17 +852,26 @@ def test_listCaseHearingDate(test_df):
         # Get the first Record per Case
         winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
 
-        final_df = winning_records.withColumn("expected_hearing_date", 
-        F.to_timestamp(
-            F.concat(
-                F.date_format(F.col("HearingDate"), "yyyy-MM-dd"), 
-                F.lit(" "), 
-                F.date_format(F.col("StartTime"), "HH:mm:ss")
-            )
-        ))
+        target_date = F.when(
+            (F.col("CaseStatus") == 38) & F.col("HearingDate").isNull(), 
+            F.col("DecisionDate")
+        ).otherwise(F.col("HearingDate"))
+
+        final_df = winning_records.withColumn(
+            "expected_hearing_date",
+            F.when(
+                target_date.isNotNull(),
+                F.concat(
+                    F.date_format(F.to_timestamp(target_date), "yyyy-MM-dd"),
+                    F.lit("T"),
+                    F.when(F.col("StartTime").isNull(), F.lit("00:00:00.000"))
+                     .otherwise(F.date_format(F.to_timestamp(F.col("StartTime")), "HH:mm:ss.SSS"))
+                )
+            ).otherwise(None)
+        )
 
         acceptance_critera = final_df.filter(
-            F.col("listCaseHearingDate").cast("timestamp") != F.col("expected_hearing_date")
+            ~F.col("listCaseHearingDate").eqNullSafe(F.col("expected_hearing_date"))
         )
 
         if acceptance_critera.count() > 0:

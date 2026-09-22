@@ -1141,7 +1141,7 @@ def test_amountRemitted_test1(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection"))) &
+            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
             (col("PaymentRemissionGranted") == 1)
             ).count() == 0:
             return TestResult("amountRemitted", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)

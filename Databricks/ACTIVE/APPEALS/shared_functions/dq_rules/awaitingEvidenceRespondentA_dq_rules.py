@@ -5,6 +5,11 @@ class awaitingEvidenceRespondentADQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
+        checks = checks | self.get_checks_case_state()
+
+        return checks
+
+    def get_checks_case_state(self, checks={}):
 
         return checks
 
@@ -16,7 +21,5 @@ class awaitingEvidenceRespondentADQRules(DQRulesBase):
         checks["valid_uploadHomeOfficeBundleAvailable"] = "(uploadHomeOfficeBundleAvailable <=> 'Yes')"
 
         checks["valid_changeDirectionDueDateActionAvailable"] = "(changeDirectionDueDateActionAvailable <=> 'Yes')"
-
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'awaitingRespondentEvidence')"
 
         return checks

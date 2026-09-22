@@ -11,7 +11,6 @@ def spark():
         .getOrCreate()
     )
 
-##### Testing the generalDefault function #####
 @pytest.fixture(scope="session")
 def generalDefault_outputs(spark):
     data = [

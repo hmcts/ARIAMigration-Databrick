@@ -8,6 +8,7 @@ class remittedDQRules(DQRulesBase):
         checks = checks | self.get_checks_remitted()
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_case_state()
 
         return checks
 
@@ -93,9 +94,11 @@ class remittedDQRules(DQRulesBase):
         return checks
 
 
-    def get_checks_general_default(self, checks={}):
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'remitted')"
+    def get_checks_case_state(self, checks={}):
 
+        return checks
+
+    def get_checks_general_default(self, checks={}):
         checks["valid_caseFlagSetAsideReheardExists"] = (
             """
                 (caseFlagSetAsideReheardExists = 'Yes')

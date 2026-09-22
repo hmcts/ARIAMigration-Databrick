@@ -8,7 +8,12 @@ class decidedADQRules(DQRulesBase):
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_substantive_decision()
         checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_case_state()
         checks = checks | self.get_checks_ftpa()
+
+        return checks
+
+    def get_checks_case_state(self, checks={}):
 
         return checks
 
@@ -134,13 +139,10 @@ class decidedADQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'decided')"
-
         checks["valid_appealDecisionAvailable"] = ("(appealDecisionAvailable <=> 'Yes')")
 
         checks["valid_haveHearingAttendeesAndDurationBeenRecorded"] = ("(haveHearingAttendeesAndDurationBeenRecorded <=> 'Yes')")
 
-        # decisionAndReasonsAvailable is dropped from decided(a) onwards; override the rule inherited from decision to assert it is NULL.
         checks["valid_decisionAndReasonsAvailable"] = ("(decisionAndReasonsAvailable IS NULL)")
 
         return checks

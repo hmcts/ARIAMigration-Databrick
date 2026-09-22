@@ -30,7 +30,6 @@ class TestReasonForAppealSubmittedGeneral:
             StructField("uploadHomeOfficeBundleAvailable", StringType())
         ])
 
-        # Values inherited from awaitingEvidenceRespondent(a/b)
         caseList = [
             ("1", "Yes", "No"),
             ("2", "Yes", "No"),
@@ -62,7 +61,6 @@ class TestReasonForAppealSubmittedGeneral:
             assert results["1"]["uploadAdditionalEvidenceHomeOfficeActionAvailable"] == "Yes"
             assert results["2"]["uploadAdditionalEvidenceHomeOfficeActionAvailable"] == "Yes"
 
-            # Not overridden here; inherited from awaitingEvidenceRespondent(a/b)
             assert results["1"]["changeDirectionDueDateActionAvailable"] == "Yes"
             assert results["2"]["changeDirectionDueDateActionAvailable"] == "Yes"
             assert results["1"]["uploadHomeOfficeBundleAvailable"] == "No"

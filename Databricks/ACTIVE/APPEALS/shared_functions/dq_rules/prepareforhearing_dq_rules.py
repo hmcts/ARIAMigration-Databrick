@@ -12,7 +12,6 @@ class prepareForHearingDQRules(DQRulesBase):
         return checks
 
     def get_checks_case_state(self, checks={}):
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'prepareForHearing')"
 
         return checks
 

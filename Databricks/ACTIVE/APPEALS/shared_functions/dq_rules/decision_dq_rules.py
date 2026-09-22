@@ -8,7 +8,12 @@ class decisionDQRules(DQRulesBase):
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_substantive_decision()
         checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_case_state()
         checks = checks | self.get_checks_general()
+
+        return checks
+
+    def get_checks_case_state(self, checks={}):
 
         return checks
 
@@ -65,8 +70,6 @@ class decisionDQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'decision')"
-
         checks["valid_hmcts"] = ("(hmcts <=> '[userImage:hmcts.png]')")
 
         checks["valid_stitchingStatus"] = ("(stitchingStatus <=> 'DONE')")

@@ -11,7 +11,6 @@ class ftpaDecidedDQRules(DQRulesBase):
         return checks
 
     def get_checks_case_state(self, checks={}):
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'ftpaDecided')"
 
         return checks
 
@@ -286,16 +285,16 @@ class ftpaDecidedDQRules(DQRulesBase):
     
     def get_checks_ftpaGeneral(self, checks={}):
 
-        checks["valid_isAppellantFtpaDecisionvisibletoAll"] = ("""(
-            (dq_cs39_status <=> 39 AND Party IS NOT NULL AND Party IN (0,1) AND isAppellantFtpaDecisionvisibletoAll <=> "Yes")
+        checks["valid_isAppellantFtpaDecisionVisibleToAll"] = ("""(
+            (dq_cs39_status <=> 39 AND Party IS NOT NULL AND Party IN (0,1) AND isAppellantFtpaDecisionVisibleToAll <=> "Yes")
             OR
-            (isAppellantFtpaDecisionvisibletoAll IS NULL)
+            (isAppellantFtpaDecisionVisibleToAll IS NULL)
         )""")
 
-        checks["valid_isRespondentFtpaDecisionvisibletoAll"] = ("""(
-            (dq_cs39_status <=> 39 AND Party <=> 2 AND isRespondentFtpaDecisionvisibletoAll <=> "Yes")
+        checks["valid_isRespondentFtpaDecisionVisibleToAll"] = ("""(
+            (dq_cs39_status <=> 39 AND Party <=> 2 AND isRespondentFtpaDecisionVisibleToAll <=> "Yes")
             OR
-            (isRespondentFtpaDecisionvisibletoAll IS NULL)
+            (isRespondentFtpaDecisionVisibleToAll IS NULL)
         )""")
 
         checks["valid_isDlrmSetAsideEnabled"] = ("""(

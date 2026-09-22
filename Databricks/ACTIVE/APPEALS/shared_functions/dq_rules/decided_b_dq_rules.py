@@ -7,8 +7,13 @@ class decidedBDQRules(DQRulesBase):
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_general()
         checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_case_state()
         checks = checks | self.get_checks_ftpa()
         checks = checks | self.get_checks_set_aside()
+
+        return checks
+
+    def get_checks_case_state(self, checks={}):
 
         return checks
 
@@ -38,14 +43,11 @@ class decidedBDQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'decided')"
-
         checks["valid_isDlrmSetAsideEnabled"] = ("(isDlrmSetAsideEnabled <=> 'Yes')")
         checks["valid_isReheardAppealEnabled"] = ("(isReheardAppealEnabled <=> 'Yes')")
         checks["valid_secondFtpaDecisionExists"] = ("(secondFtpaDecisionExists <=> 'No')")
         checks["valid_caseFlagSetAsideReheardExists"] = ("(caseFlagSetAsideReheardExists <=> 'Yes')")
 
-        # decided(b) branches off ftpaSubmitted(a), so these override the values it sets.
         checks["valid_uploadAddendumEvidenceActionAvailable"] = ("(uploadAddendumEvidenceActionAvailable <=> 'Yes')")
         checks["valid_markAddendumEvidenceAsReviewedActionAvailable"] = ("(markAddendumEvidenceAsReviewedActionAvailable <=> 'Yes')")
         checks["valid_uploadAddendumEvidenceLegalRepActionAvailable"] = ("(uploadAddendumEvidenceLegalRepActionAvailable <=> 'Yes')")

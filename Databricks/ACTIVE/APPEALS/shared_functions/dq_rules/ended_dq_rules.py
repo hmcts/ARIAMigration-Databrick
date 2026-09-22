@@ -22,7 +22,6 @@ class endedDQRules(DQRulesBase):
 
 
     def get_checks_case_state(self, checks={}):
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'ended')"
 
         return checks
 

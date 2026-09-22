@@ -5,6 +5,11 @@ class caseUnderReviewDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
+        checks = checks | self.get_checks_case_state()
+
+        return checks
+
+    def get_checks_case_state(self, checks={}):
 
         return checks
 
@@ -47,7 +52,5 @@ class caseUnderReviewDQRules(DQRulesBase):
                 (NOT(dv_representation <=> 'LR') AND caseArgumentAvailable IS NULL)
             )"""
         )
-
-        checks["valid_ariaDesiredState"] = "(ariaDesiredState <=> 'caseUnderReview')"
 
         return checks

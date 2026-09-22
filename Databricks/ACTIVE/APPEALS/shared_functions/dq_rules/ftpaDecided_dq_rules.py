@@ -4,13 +4,8 @@ class ftpaDecidedDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_ftpaDecided()
-        checks = checks | self.get_checks_case_state()
         checks = checks | self.get_checks_ftpaGeneral()
         checks = checks | self.get_checks_ftpaDocuments()
-
-        return checks
-
-    def get_checks_case_state(self, checks={}):
 
         return checks
 

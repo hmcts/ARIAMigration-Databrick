@@ -7,7 +7,6 @@ class ftpaSubmittedADQRules(DQRulesBase):
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_general()
         checks = checks | self.get_checks_general_default()
-        checks = checks | self.get_checks_case_state()
         checks = checks | self.get_checks_ftpa()
 
         return checks
@@ -68,10 +67,6 @@ class ftpaSubmittedADQRules(DQRulesBase):
                 ELSE ftpaRespondentOutOfTimeDocuments IS NULL
             END
         )"""
-
-        return checks
-
-    def get_checks_case_state(self, checks={}):
 
         return checks
 

@@ -8,7 +8,6 @@ class remittedDQRules(DQRulesBase):
         checks = checks | self.get_checks_remitted()
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_general_default()
-        checks = checks | self.get_checks_case_state()
 
         return checks
 
@@ -93,10 +92,6 @@ class remittedDQRules(DQRulesBase):
         checks["valid_uploadOtherRemittalDocs"] = ("(COALESCE(size(uploadOtherRemittalDocs), 0) = 0) ")
         return checks
 
-
-    def get_checks_case_state(self, checks={}):
-
-        return checks
 
     def get_checks_general_default(self, checks={}):
         checks["valid_caseFlagSetAsideReheardExists"] = (

@@ -5,11 +5,6 @@ class reasonsForAppealSubmittedDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
-        checks = checks | self.get_checks_case_state()
-
-        return checks
-
-    def get_checks_case_state(self, checks={}):
 
         return checks
 

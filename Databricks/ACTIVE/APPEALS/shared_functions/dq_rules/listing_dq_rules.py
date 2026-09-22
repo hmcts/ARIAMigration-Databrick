@@ -8,12 +8,7 @@ class listingDQRules(DQRulesBase):
         checks = checks | self.get_checks_hearing_requirements()
         checks = checks | self.get_checks_general()
         checks = checks | self.get_checks_general_default()
-        checks = checks | self.get_checks_case_state()
         checks = checks | self.get_checks_document()
-
-        return checks
-
-    def get_checks_case_state(self, checks={}):
 
         return checks
 

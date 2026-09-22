@@ -5,7 +5,6 @@ class endedDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_ended()
-        checks = checks | self.get_checks_case_state()
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_hearingDetails()
         checks = checks | self.get_checks_ftpa()
@@ -20,10 +19,6 @@ class endedDQRules(DQRulesBase):
 
         return checks
 
-
-    def get_checks_case_state(self, checks={}):
-
-        return checks
 
     def get_checks_ended(self, checks={}):
 

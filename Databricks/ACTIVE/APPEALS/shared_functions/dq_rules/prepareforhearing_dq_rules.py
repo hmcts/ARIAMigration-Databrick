@@ -285,13 +285,14 @@ class prepareForHearingDQRules(DQRulesBase):
         checks["valid_listCaseHearingLength"] = ("""
         (
             (
-                CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING)
-                AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
-                AND roundedTimeEstimate IS NOT NULL AND CAST(roundedTimeEstimate AS INT) IN (30, 60, 90, 120, 150, 180,210, 240, 270, 300, 330, 360)
+                CAST(listCaseHearing_roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING)
+                AND listCaseHearing_CaseStatus IS NOT NULL AND listCaseHearing_CaseStatus IN (37,38,26)
+                AND NOT(listCaseHearing_Outcome <=> 38)
+                AND listCaseHearing_roundedTimeEstimate IS NOT NULL AND CAST(listCaseHearing_roundedTimeEstimate AS INT) IN (30, 60, 90, 120, 150, 180,210, 240, 270, 300, 330, 360)
             )
             OR
             (
-                (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND roundedTimeEstimate IS NULL
+                (listCaseHearing_CaseStatus NOT IN (37,38,26) OR listCaseHearing_CaseStatus IS NULL OR listCaseHearing_Outcome <=> 38) AND listCaseHearing_roundedTimeEstimate IS NULL
             )
         )
         """)
@@ -302,12 +303,22 @@ class prepareForHearingDQRules(DQRulesBase):
                 (
                     listCaseHearingDate IS NOT NULL
                     AND listCaseHearingDate <=>
-                        CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
-                            CASE
-                            WHEN StartTime IS NULL THEN '00:00:00.000'
-                            ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
-                            END)
-                        AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
+                        CASE
+                            WHEN listCaseHearing_CaseStatus = 38 AND listCaseHearing_HearingDate IS NULL THEN
+                                CONCAT(date_format(CAST(listCaseHearing_DecisionDate AS timestamp), 'yyyy-MM-dd'),'T',
+                                    CASE
+                                    WHEN listCaseHearing_StartTime IS NULL THEN '00:00:00.000'
+                                    ELSE date_format(CAST(listCaseHearing_StartTime AS timestamp), 'HH:mm:ss.SSS')
+                                    END)
+                            ELSE
+                                CONCAT(date_format(CAST(listCaseHearing_HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
+                                    CASE
+                                    WHEN listCaseHearing_StartTime IS NULL THEN '00:00:00.000'
+                                    ELSE date_format(CAST(listCaseHearing_StartTime AS timestamp), 'HH:mm:ss.SSS')
+                                    END)
+                        END
+                        AND listCaseHearing_CaseStatus IS NOT NULL AND listCaseHearing_CaseStatus IN (37,38,26)
+                        AND NOT(listCaseHearing_Outcome <=> 38)
                 )
             )
             """)
@@ -316,11 +327,12 @@ class prepareForHearingDQRules(DQRulesBase):
             """
             (
                 (
-                    listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
+                    listCaseHearingCentre <=> bronze_listCaseHearingCentre AND listCaseHearing_CaseStatus IS NOT NULL AND listCaseHearing_CaseStatus IN (37,38,26)
+                    AND NOT(listCaseHearing_Outcome <=> 38)
                 )
                 OR
                 (
-                    (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND listCaseHearingCentre IS NULL
+                    (listCaseHearing_CaseStatus NOT IN (37,38,26) OR listCaseHearing_CaseStatus IS NULL OR listCaseHearing_Outcome <=> 38) AND listCaseHearingCentre IS NULL
                 )
             )
         """)
@@ -329,11 +341,12 @@ class prepareForHearingDQRules(DQRulesBase):
             """
             (
                 (
-                    listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
+                    listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress AND listCaseHearing_CaseStatus IS NOT NULL AND listCaseHearing_CaseStatus IN (37,38,26)
+                    AND NOT(listCaseHearing_Outcome <=> 38)
                 )
                 OR
                 (
-                    (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND listCaseHearingCentreAddress IS NULL
+                    (listCaseHearing_CaseStatus NOT IN (37,38,26) OR listCaseHearing_CaseStatus IS NULL OR listCaseHearing_Outcome <=> 38) AND listCaseHearingCentreAddress IS NULL
                 )
             )
             """)

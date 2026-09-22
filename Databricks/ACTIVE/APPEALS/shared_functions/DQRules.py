@@ -243,7 +243,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     )
 
     allowed = [30,60,90,120,150,180,210,240,270,300,330,360]
-    # prepare for hearing - hearing response
+    # prepare for hearing - hearing response (for non-listCaseHearing fields)
     df_m3_validation = (
         silver_m3
             .filter(col("CaseStatus").isin(37, 38))
@@ -269,14 +269,52 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             )
     )
 
-        
+    # prepare for hearing - listCaseHearing fields validation (different filter: CaseStatus IN (37,38,26) AND Outcome != 38)
+    df_m3_validation_lc = (
+        silver_m3
+            .filter((col("CaseStatus").isin(37, 38, 26)) & (~(col("Outcome").eqNullSafe(38))))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1).drop("row_number")
+            .withColumn(
+                "listCaseHearing_roundedTimeEstimate",
+                array_min(
+                    transform(
+                        array(*[lit(x) for x in allowed]),
+                        lambda x: struct(
+                            abs(x - col("TimeEstimate").cast("int")).alias("dist"),
+                            x.alias("value")
+                        )
+                    )
+                ).getField("value")
+            )
+            .select(
+                "CaseNo",
+                col("CaseStatus").alias("listCaseHearing_CaseStatus"),
+                col("Outcome").alias("listCaseHearing_Outcome"),
+                col("HearingCentre").alias("listCaseHearing_HearingCentre"),
+                col("HearingDate").alias("listCaseHearing_HearingDate"),
+                col("StartTime").alias("listCaseHearing_StartTime"),
+                col("DecisionDate").alias("listCaseHearing_DecisionDate"),
+                "listCaseHearing_roundedTimeEstimate"
+            )
+    )
+
+    bronze_listing_location_lc = bronze_listing_location.select(
+        col("ListedCentre").alias("listCaseHearing_ListedCentre"),
+        col("listCaseHearingCentre").alias("bronze_listCaseHearingCentre"),
+        col("listCaseHearingCentreAddress").alias("bronze_listCaseHearingCentreAddress")
+    )
+
     valid_preparforhearing = (
         silver_m1.select("CaseNo")
             .join(df_m3_validation, on="CaseNo", how="left")
             .join(bronze_listing_location
-                .select(col("ListedCentre"), col("locationCode"), col("locationLabel"), col("listCaseHearingCentre").alias("bronze_listCaseHearingCentre"), col("listCaseHearingCentreAddress").alias("bronze_listCaseHearingCentreAddress")),
+                .select(col("ListedCentre"), col("locationCode"), col("locationLabel")),
                 on=col("HearingCentre") == col("ListedCentre"), how="left")
             .drop("HearingCentre")
+            .join(df_m3_validation_lc, on="CaseNo", how="left")
+            .join(bronze_listing_location_lc, on=col("listCaseHearing_HearingCentre") == col("listCaseHearing_ListedCentre"), how="left")
+            .drop("listCaseHearing_HearingCentre", "listCaseHearing_ListedCentre")
     )
 
     # decided(a) - ftpaApplicationDeadline
@@ -629,13 +667,6 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
     silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
-    valid_preparforhearing = (
-        silver_m1.select("CaseNo")
-            .join(df_m3_validation, on="CaseNo", how="left")
-            .join(bronze_listing_location.select(col("ListedCentre"),col("locationCode"),col("locationLabel"),col("listCaseHearingCentre").alias("bronze_listCaseHearingCentre"),col("listCaseHearingCentreAddress").alias("bronze_listCaseHearingCentreAddress")), on=col("HearingCentre") == col("ListedCentre"), how="left")
-            .drop("HearingCentre")
-    )
-    
     #ftpaDecided - outcome in 30,31,14. status in 39,46
     silver_m3_filtered_fptaDec = silver_m3.filter(col("CaseStatus").isin([39,46]) & col("Outcome").isin([30, 31, 14]))
     ftpaDecided_outcome = silver_m3_filtered_fptaDec.withColumn("row_number", row_number().over(window_spec))

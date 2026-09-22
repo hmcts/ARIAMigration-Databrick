@@ -3,7 +3,7 @@ from models.test_result import TestResult
 from Test_Functions.test_helpers import classify_all
 
 
-def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bac, bll, b, fields_to_exclude, child_fields_to_exclude):
+def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bac, bll, b, fields_to_exclude, child_fields_to_exclude, current_state=None):
     all_test_results = []
 
     # -- Default mappings --
@@ -28,7 +28,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
          if "isInterpreterServicesNeeded" not in fields_to_exclude:
               all_test_results.append(list_tests.test_isInterpreterServicesNeeded_test1(test_df))
               all_test_results.append(list_tests.test_isInterpreterServicesNeeded_test2(test_df))
-              all_test_results.append(list_tests.test_isInterpreterServicesNeeded_test3(test_df))
+              all_test_results.append(list_tests.test_isInterpreterServicesNeeded_test3(test_df, current_state))
 
          if "singleSexCourt" not in fields_to_exclude:
               all_test_results.append(list_tests.test_singleSexCourt_test1(test_df))
@@ -38,21 +38,21 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
          if "singleSexCourtType" not in fields_to_exclude:
               all_test_results.append(list_tests.test_singleSexCourtType_test1(test_df))
               all_test_results.append(list_tests.test_singleSexCourtType_test2(test_df))
-              all_test_results.append(list_tests.test_singleSexCourtType_test3(test_df))
+              all_test_results.append(list_tests.test_singleSexCourtType_test3(test_df, current_state))
 
          if "singleSexCourtTypeDescription" not in fields_to_exclude:
               all_test_results.append(list_tests.test_singleSexCourtTypeDescription_test1(test_df))
               all_test_results.append(list_tests.test_singleSexCourtTypeDescription_test2(test_df))
-              all_test_results.append(list_tests.test_singleSexCourtTypeDescription_test3(test_df))
+              all_test_results.append(list_tests.test_singleSexCourtTypeDescription_test3(test_df, current_state))
 
          if "inCameraCourt" not in fields_to_exclude:
               all_test_results.append(list_tests.test_inCameraCourt_test1(test_df))
               all_test_results.append(list_tests.test_inCameraCourt_test2(test_df))
-              all_test_results.append(list_tests.test_inCameraCourt_test3(test_df))
+              all_test_results.append(list_tests.test_inCameraCourt_test3(test_df, current_state))
 
          if "inCameraCourtDescription" not in fields_to_exclude:
               all_test_results.append(list_tests.test_inCameraCourtDescription_test1(test_df))
-              all_test_results.append(list_tests.test_inCameraCourtDescription_test2(test_df))
+              all_test_results.append(list_tests.test_inCameraCourtDescription_test2(test_df, current_state))
          
          if "appellantLevelFlags" not in fields_to_exclude:
              flags_df, flags_setup_pass = list_tests.test_flags_init(json_data, M1_bronze, C)

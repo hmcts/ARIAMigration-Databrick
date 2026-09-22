@@ -561,6 +561,8 @@ def test_paidDate_test2(test_df):
 #######################
 def test_paidAmount_test1(test_df):
     try:
+        all_transactions = test_df
+
         # Filter for SumTotalPay = 1
         test_df = test_df.filter(
             (col("SumTotalPay") == 1) &
@@ -572,7 +574,7 @@ def test_paidAmount_test1(test_df):
             return TestResult("paidAmount", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         # SELECT ReferringTransactionId FROM M4 WHERE TransactionTypeId NOT IN (6,19)
-        m4_exclusion_ids = test_df.filter(~col("TransactionTypeId").isin(6, 19)) \
+        m4_exclusion_ids = all_transactions.filter(~col("TransactionTypeId").isin(6, 19)) \
                                     .select(col("ReferringTransactionId").alias("ref_id")) \
                                     .distinct()
 

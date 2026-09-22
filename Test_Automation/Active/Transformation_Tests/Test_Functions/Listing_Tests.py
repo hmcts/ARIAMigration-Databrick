@@ -335,7 +335,7 @@ def test_isInterpreterServicesNeeded_test2(test_df):
 #######################
 # isInterpreterServicesNeeded - Check isInterpreterServicesNeeded is not null (mandatory field) 
 #######################
-def test_isInterpreterServicesNeeded_test3(test_df):
+def test_isInterpreterServicesNeeded_test3(test_df, current_state=None):
     try:
         if test_from_state != "listing" and test_df.filter(col("isInterpreterServicesNeeded").isNotNull()).count() == 0:
             return TestResult("isInterpreterServicesNeeded", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
@@ -442,7 +442,7 @@ def test_singleSexCourt_test3(test_df):
 #######################
 # singleSexCourt - Check singleSexCourt is not null
 #######################
-def test_singleSexCourt_test4(test_df):
+def test_singleSexCourt_test4(test_df, current_state=None):
     try:
         if test_from_state != "listing" and test_df.filter(col("singleSexCourt").isNotNull()).count() == 0:
             return TestResult("singleSexCourt", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
@@ -522,7 +522,7 @@ def test_singleSexCourtType_test2(test_df):
 #######################
 # singleSexCourtType - Check where M1.CourtPreference != 1 or 2 and singleSexCourtType isNull”
 #######################
-def test_singleSexCourtType_test3(test_df):
+def test_singleSexCourtType_test3(test_df, current_state=None):
     try:
         if test_from_state != "listing" and test_df.filter(col("singleSexCourtType").isNotNull()).count() == 0:
             return TestResult("singleSexCourtType", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
@@ -608,7 +608,7 @@ def test_singleSexCourtTypeDescription_test2(test_df):
 #######################
 # singleSexCourtTypeDescription - Check where M1.CourtPreference != 1 or 2 and singleSexCourtTypeDescription isNull
 #######################
-def test_singleSexCourtTypeDescription_test3(test_df):
+def test_singleSexCourtTypeDescription_test3(test_df, current_state=None):
     try:
         if test_from_state != "listing" and test_df.filter(col("singleSexCourtTypeDescription").isNotNull()).count() == 0:
             return TestResult("singleSexCourtTypeDescription", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
@@ -694,7 +694,7 @@ def test_inCameraCourt_test2(test_df):
 #######################
 # inCameraCourt - Check inCameraCourt is not null
 #######################
-def test_inCameraCourt_test3(test_df):
+def test_inCameraCourt_test3(test_df, current_state=None):
     try:
         if test_from_state != "listing" and test_df.filter(col("inCameraCourt").isNotNull()).count() == 0:
             return TestResult("inCameraCourt", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
@@ -747,7 +747,7 @@ def test_inCameraCourtDescription_test1(test_df):
 #######################
 # inCameraCourtDescription - Check where M1.InCamera != 1 and inCameraCourtDescription is omitted
 #######################
-def test_inCameraCourtDescription_test2(test_df):
+def test_inCameraCourtDescription_test2(test_df, current_state=None):
     try:
         if test_from_state != "listing" and test_df.filter(col("inCameraCourtDescription").isNotNull()).count() == 0:
             return TestResult("inCameraCourtDescription", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)

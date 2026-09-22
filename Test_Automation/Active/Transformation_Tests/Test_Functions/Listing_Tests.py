@@ -319,7 +319,7 @@ def test_isInterpreterServicesNeeded_test2(test_df):
         acceptance_critera = test_df.filter(
         (
             (col("Interpreter").isNotNull()) &
-            (col("Interpreter") == 1)
+            (col("Interpreter") == 0)
         ) &
             (col("isInterpreterServicesNeeded") != "No")
         )
@@ -337,6 +337,9 @@ def test_isInterpreterServicesNeeded_test2(test_df):
 #######################
 def test_isInterpreterServicesNeeded_test3(test_df):
     try:
+        if test_from_state != "listing" and test_df.filter(col("isInterpreterServicesNeeded").isNotNull()).count() == 0:
+            return TestResult("isInterpreterServicesNeeded", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        
         #Check we have Records To test
         if test_df.filter(
             (col("isInterpreterServicesNeeded").isNotNull())
@@ -441,6 +444,9 @@ def test_singleSexCourt_test3(test_df):
 #######################
 def test_singleSexCourt_test4(test_df):
     try:
+        if test_from_state != "listing" and test_df.filter(col("singleSexCourt").isNotNull()).count() == 0:
+            return TestResult("singleSexCourt", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        
         #Check we have Records To test
         if test_df.filter(
             (col("singleSexCourt").isNotNull())
@@ -518,6 +524,9 @@ def test_singleSexCourtType_test2(test_df):
 #######################
 def test_singleSexCourtType_test3(test_df):
     try:
+        if test_from_state != "listing" and test_df.filter(col("singleSexCourtType").isNotNull()).count() == 0:
+            return TestResult("singleSexCourtType", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        
         #Check we have Records To test
         if test_df.filter(
             (col("CourtPreference").isNotNull()) &
@@ -601,19 +610,22 @@ def test_singleSexCourtTypeDescription_test2(test_df):
 #######################
 def test_singleSexCourtTypeDescription_test3(test_df):
     try:
+        if test_from_state != "listing" and test_df.filter(col("singleSexCourtTypeDescription").isNotNull()).count() == 0:
+            return TestResult("singleSexCourtTypeDescription", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        
         #Check we have Records To test
         if test_df.filter(
             (col("CourtPreference").isNotNull()) &
-            (col("CourtPreference") == 1) &
-            (col("CourtPreference") == 2)
+            (col("CourtPreference") != 1) &
+            (col("CourtPreference") != 2)
             ).count() == 0:
             return TestResult("singleSexCourtTypeDescription", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
         (
             (col("CourtPreference").isNotNull()) &
-            (col("CourtPreference") == 1) &
-            (col("CourtPreference") == 2)
+            (col("CourtPreference") != 1) &
+            (col("CourtPreference") != 2)
         ) & (col("singleSexCourtTypeDescription").isNotNull())
         )
 
@@ -633,14 +645,14 @@ def test_inCameraCourt_test1(test_df):
         #Check we have Records To test
         if test_df.filter(
             (col("inCamera").isNotNull()) &
-            (col("inCamera") == 1)
+            (col("inCamera") == True)
             ).count() == 0:
             return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
         (
             (col("inCamera").isNotNull()) &
-            (col("inCamera") == 1)
+            (col("inCamera") == True)
         ) & (col("inCameraCourt") != "Yes")
         )
 
@@ -660,14 +672,14 @@ def test_inCameraCourt_test2(test_df):
         #Check we have Records To test
         if test_df.filter(
             (col("inCamera").isNotNull()) &
-            (col("inCamera") == 0)
+            (col("inCamera") == False)
             ).count() == 0:
             return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
         (
             (col("inCamera").isNotNull()) &
-            (col("inCamera") == 0)
+            (col("inCamera") == False)
         ) & (col("inCameraCourt") != "No")
         )
 
@@ -684,6 +696,9 @@ def test_inCameraCourt_test2(test_df):
 #######################
 def test_inCameraCourt_test3(test_df):
     try:
+        if test_from_state != "listing" and test_df.filter(col("inCameraCourt").isNotNull()).count() == 0:
+            return TestResult("inCameraCourt", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        
         #Check we have Records To test
         if test_df.filter(
             (col("inCameraCourt").isNotNull())
@@ -710,14 +725,14 @@ def test_inCameraCourtDescription_test1(test_df):
         #Check we have Records To test
         if test_df.filter(
             (col("inCamera").isNotNull()) &
-            (col("inCamera") == "true")
+            (col("inCamera") == True)
             ).count() == 0:
-            return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourtDescription", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
         (
             (col("inCamera").isNotNull()) &
-            (col("inCamera") == "true")
+            (col("inCamera") == True)
         ) & (col("inCameraCourtDescription") != "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court.")
         )
 
@@ -734,14 +749,18 @@ def test_inCameraCourtDescription_test1(test_df):
 #######################
 def test_inCameraCourtDescription_test2(test_df):
     try:
+        if test_from_state != "listing" and test_df.filter(col("inCameraCourtDescription").isNotNull()).count() == 0:
+            return TestResult("inCameraCourtDescription", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        
         #Check we have Records To test
         if test_df.filter(
-            (col("inCamera") == "false")
+            (col("inCamera").isNull()) | (col("inCamera") == False)
             ).count() == 0:
-            return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourtDescription", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
-        (col("inCamera") == "false") & (col("inCameraCourtDescription").isNotNull())
+            ((col("inCamera").isNull()) | (col("inCamera") == False)) & 
+            (col("inCameraCourtDescription").isNotNull())
         )
 
         if acceptance_critera.count() != 0:

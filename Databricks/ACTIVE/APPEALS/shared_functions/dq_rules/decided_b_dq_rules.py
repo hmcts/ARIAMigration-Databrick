@@ -38,11 +38,18 @@ class decidedBDQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
-
         checks["valid_isDlrmSetAsideEnabled"] = ("(isDlrmSetAsideEnabled <=> 'Yes')")
         checks["valid_isReheardAppealEnabled"] = ("(isReheardAppealEnabled <=> 'Yes')")
         checks["valid_secondFtpaDecisionExists"] = ("(secondFtpaDecisionExists <=> 'No')")
         checks["valid_caseFlagSetAsideReheardExists"] = ("(caseFlagSetAsideReheardExists <=> 'Yes')")
+
+        checks["valid_uploadAddendumEvidenceActionAvailable"] = ("(uploadAddendumEvidenceActionAvailable <=> 'Yes')")
+        checks["valid_markAddendumEvidenceAsReviewedActionAvailable"] = ("(markAddendumEvidenceAsReviewedActionAvailable <=> 'Yes')")
+        checks["valid_uploadAddendumEvidenceLegalRepActionAvailable"] = ("(uploadAddendumEvidenceLegalRepActionAvailable <=> 'Yes')")
+        checks["valid_uploadAddendumEvidenceHomeOfficeActionAvailable"] = ("(uploadAddendumEvidenceHomeOfficeActionAvailable <=> 'Yes')")
+        checks["valid_uploadAddendumEvidenceAdminOfficerActionAvailable"] = ("(uploadAddendumEvidenceAdminOfficerActionAvailable <=> 'Yes')")
+        checks["valid_reviewResponseActionAvailable"] = ("(reviewResponseActionAvailable <=> 'Yes')")
+        checks["valid_uploadHomeOfficeAppealResponseActionAvailable"] = ("(uploadHomeOfficeAppealResponseActionAvailable <=> 'No')")
 
         return checks
 

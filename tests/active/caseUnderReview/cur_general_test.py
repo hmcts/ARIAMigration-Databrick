@@ -53,3 +53,13 @@ class TestCaseUnderReviewGeneral:
             assert caseArgumentAvailableList[0][0] == "Yes"
             assert caseArgumentAvailableList[1][0] == "Yes"
             assert len(caseArgumentAvailableList) == 2
+
+            for flag in [
+                "markEvidenceAsReviewedActionAvailable",
+                "uploadAdditionalEvidenceActionAvailable",
+                "uploadAdditionalEvidenceHomeOfficeActionAvailable"
+            ]:
+                flagList = df.orderBy(col("CaseNo").cast("int")).select(flag).collect()
+
+                assert flagList[0][0] == "Yes"
+                assert flagList[1][0] == "Yes"

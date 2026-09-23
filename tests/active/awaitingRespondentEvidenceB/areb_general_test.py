@@ -24,12 +24,13 @@ class TestAwaitingRespondentEvidenceBGeneral:
 
     def aera_general_default_df(self, spark):
         AERA_COLUMNS = StructType([
-            StructField("CaseNo", StringType())
+            StructField("CaseNo", StringType()),
+            StructField("uploadHomeOfficeBundleAvailable", StringType())
         ])
 
         caseList = [
-            ("1",),
-            ("2",)
+            ("1", "Yes"),
+            ("2", "Yes")
         ]
 
         return spark.createDataFrame(caseList, AERA_COLUMNS)
@@ -49,3 +50,10 @@ class TestAwaitingRespondentEvidenceBGeneral:
 
             assert resultsList[0][0] == "No"
             assert resultsList[1][0] == "No"
+
+            assert df.columns.count("uploadHomeOfficeBundleAvailable") == 1
+
+            uploadHomeOfficeBundleAvailableList = df.orderBy(col("CaseNo").cast("int")).select("uploadHomeOfficeBundleAvailable").collect()
+
+            assert uploadHomeOfficeBundleAvailableList[0][0] == "No"
+            assert uploadHomeOfficeBundleAvailableList[1][0] == "No"

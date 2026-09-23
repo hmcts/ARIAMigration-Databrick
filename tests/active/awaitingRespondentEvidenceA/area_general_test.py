@@ -53,3 +53,8 @@ class TestAwaitingRespondentEvidenceAGeneral:
             assert directionsList[1][0] == []
             assert uploadHomeOfficeBundleAvailableList[0][0] == "Yes"
             assert uploadHomeOfficeBundleAvailableList[1][0] == "Yes"
+
+            changeDirectionDueDateActionAvailableList = df.orderBy(col("CaseNo").cast("int")).select("changeDirectionDueDateActionAvailable").collect()
+
+            assert changeDirectionDueDateActionAvailableList[0][0] == "Yes"
+            assert changeDirectionDueDateActionAvailableList[1][0] == "Yes"

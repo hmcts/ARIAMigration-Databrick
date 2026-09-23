@@ -437,6 +437,13 @@ def generalDefault(silver_m1):
         .withColumn("isReheardAppealEnabled", lit("Yes"))
         .withColumn("secondFtpaDecisionExists", lit("No"))
         .withColumn("caseFlagSetAsideReheardExists", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceActionAvailable", lit("Yes"))
+        .withColumn("markAddendumEvidenceAsReviewedActionAvailable", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceLegalRepActionAvailable", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceHomeOfficeActionAvailable", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceAdminOfficerActionAvailable", lit("Yes"))
+        .withColumn("reviewResponseActionAvailable", lit("Yes"))
+        .withColumn("uploadHomeOfficeAppealResponseActionAvailable", lit("No"))
     )
 
     return general_df

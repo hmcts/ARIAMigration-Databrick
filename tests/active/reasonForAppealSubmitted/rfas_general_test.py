@@ -25,13 +25,15 @@ class TestReasonForAppealSubmittedGeneral:
     def aerb_general_default_df(self, spark):
         # Alphabetical ordered columns for re-ordering by function.
         AERB_COLUMNS = StructType([
-            StructField("CaseNo", StringType())
+            StructField("CaseNo", StringType()),
+            StructField("changeDirectionDueDateActionAvailable", StringType()),
+            StructField("uploadHomeOfficeBundleAvailable", StringType())
         ])
 
         caseList = [
-            ("1",),
-            ("2",),
-            ("3",)
+            ("1", "Yes", "No"),
+            ("2", "Yes", "No"),
+            ("3", "Yes", "No")
         ]
 
         return spark.createDataFrame(caseList, AERB_COLUMNS)
@@ -52,15 +54,16 @@ class TestReasonForAppealSubmittedGeneral:
 
             assert results["1"]["reasonsForAppealDecision"] == "This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal."
             assert results["2"]["reasonsForAppealDecision"] == "This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal."
-            assert results["1"]["changeDirectionDueDateActionAvailable"] == "Yes"
-            assert results["2"]["changeDirectionDueDateActionAvailable"] == "Yes"
             assert results["1"]["markEvidenceAsReviewedActionAvailable"] == "Yes"
             assert results["2"]["markEvidenceAsReviewedActionAvailable"] == "Yes"
             assert results["1"]["uploadAdditionalEvidenceActionAvailable"] == "Yes"
             assert results["2"]["uploadAdditionalEvidenceActionAvailable"] == "Yes"
             assert results["1"]["uploadAdditionalEvidenceHomeOfficeActionAvailable"] == "Yes"
             assert results["2"]["uploadAdditionalEvidenceHomeOfficeActionAvailable"] == "Yes"
-            assert results["1"]["uploadHomeOfficeBundleAvailable"] == "Yes"
-            assert results["2"]["uploadHomeOfficeBundleAvailable"] == "Yes"
+
+            assert results["1"]["changeDirectionDueDateActionAvailable"] == "Yes"
+            assert results["2"]["changeDirectionDueDateActionAvailable"] == "Yes"
+            assert results["1"]["uploadHomeOfficeBundleAvailable"] == "No"
+            assert results["2"]["uploadHomeOfficeBundleAvailable"] == "No"
 
             assert len(results) == 2

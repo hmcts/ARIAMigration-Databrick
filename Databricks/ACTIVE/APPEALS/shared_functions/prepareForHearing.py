@@ -672,12 +672,9 @@ def documents(silver_m1):
 
 def generalDefault(silver_m1):
 
-    generalDefault_df= L.generalDefault(silver_m1)
+    generalDefault_df = L.generalDefault(silver_m1)
 
-    generalDefault_df = generalDefault_df.drop("reviewedHearingRequirements")
-
-    generalDefault_df = (generalDefault_df.withColumn("reviewedHearingRequirements",lit("Yes")))
-
+    generalDefault_df = (generalDefault_df.withColumn("reviewedHearingRequirements", lit("Yes")))
 
     return generalDefault_df
 

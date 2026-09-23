@@ -281,7 +281,7 @@ class paymentPendingDQRules(DQRulesBase):
                     NOT EXISTS(COALESCE(valid_categoryIdList, ARRAY()), x -> x IN (7, 25))
                 )
                 AND
-                FORALL(caseFlags.details, x -> x.value.name <=> caseFlags.details[0].value.name)
+                FORALL(caseFlags.details, x -> x.value.name <=> 'Other')
             )
         )"""
 
@@ -382,11 +382,8 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_appellantLevelFlags_name_in_details"] = """
         (
-            appellantLevelFlags.details[0].value.name IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.name),
-                appellantLevelFlags.details[0].value.name
-            )
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.name IN ('Unaccompanied minor', 'Foreign national offender'))
         )
         """
 
@@ -402,31 +399,22 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_appellantLevelFlags_flagCode_in_details"] = """
         (
-            appellantLevelFlags.details[0].value.flagCode IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode),
-                appellantLevelFlags.details[0].value.flagCode
-            )
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.flagCode IN ('PF0013', 'PF0012'))
         )
         """
 
         checks["valid_appellantLevelFlags_flagComment_in_details"] = """
         (
-            appellantLevelFlags.details[0].value.flagComment IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.flagComment),
-                appellantLevelFlags.details[0].value.flagComment
-            )
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.flagComment IS NULL)
         )
         """
 
         checks["valid_appellantLevelFlags_hearingRelevant_in_details"] = """
         (
-            appellantLevelFlags.details[0].value.hearingRelevant IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.hearingRelevant),
-                appellantLevelFlags.details[0].value.hearingRelevant
-            )
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.hearingRelevant IN ('Yes', 'No'))
         )
         """
 

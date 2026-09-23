@@ -13,6 +13,26 @@ class listingDQRules(DQRulesBase):
         return checks
 
     def get_checks_flags(self, checks={}):
+        checks["valid_appellantLevelFlags_name_in_details"] = """
+        (
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.name IN (
+                'Unaccompanied minor', 'Foreign national offender', 'Detained individual',
+                'Step free / wheelchair access', 'Hearing loop (hearing enhancement system)',
+                'Audio / Video Evidence', 'Language Interpreter', 'Sign Language Interpreter'
+            ))
+        )
+        """
+
+        checks["valid_appellantLevelFlags_flagCode_in_details"] = """
+        (
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.flagCode IN (
+                'PF0013', 'PF0012', 'PF0019', 'RA0019', 'RA0043', 'PF0014', 'PF0015', 'RA0042'
+            ))
+        )
+        """
+
         checks["valid_appellantLevelFlags"] = """
         (
             (appellantLevelFlags IS NOT NULL AND appellantLevelFlags.details IS NOT NULL)

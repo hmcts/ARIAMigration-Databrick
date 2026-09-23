@@ -30,6 +30,7 @@ def flags_labels_outputs(spark):
         ("CASE6", "H123", "EA", "INVALID", "type1"), # fails base condition
         ("CASE7", None, "DA", "LR", "type1"),     # Fee exemption
         ("CASE8", None, "EA", "LR", "type1"),     # Relationship filtered
+        ("CASE9", None, "EA", "LR", "type1"),     # OT0001 categories with distinct comments
     ]
 
     m2_schema = T.StructType([
@@ -51,13 +52,18 @@ def flags_labels_outputs(spark):
         ("CASE6", 41, None, None,"forename7","surname7"),
         ("CASE7", None, None, None,"forename8","surname8"),
         ("CASE8", 41, "CHILD", None,"forename9","surname9"),  # filtered out
+        ("CASE9", 41, None, None,"forename10","surname10"),
+        ("CASE9", 31, None, None,"forename10","surname10"),
+        ("CASE9", 32, None, None,"forename10","surname10"),
+        ("CASE9", 8, None, None,"forename10","surname10"),
+        ("CASE9", 24, None, None,"forename10","surname10"),
     ]
 
     c_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
     ])
 
-    c_data = [(f"CASE{i}",) for i in range(1, 9)]
+    c_data = [(f"CASE{i}",) for i in range(1, 10)]
 
     silver_m1 = spark.createDataFrame(m1_data, m1_schema)
     silver_m2 = spark.createDataFrame(m2_data, m2_schema)
@@ -135,3 +141,11 @@ def test_relationship_filtered(flags_labels_outputs):
     row = flags_labels_outputs["CASE8"]
 
     assert row["caseFlags"] is None
+
+def test_ot0001_distinct_comments_not_collapsed(flags_labels_outputs):
+    row = flags_labels_outputs["CASE9"]
+
+    comments = get_flag_comments(row["caseFlags"])
+
+    assert len(comments) == 3
+    assert sorted(comments) == ["EEA Family Permit", "Expedite", "Reclassified RFT"]

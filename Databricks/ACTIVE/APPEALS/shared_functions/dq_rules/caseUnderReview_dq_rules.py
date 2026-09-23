@@ -34,4 +34,18 @@ class caseUnderReviewDQRules(DQRulesBase):
             )
         """
 
+        checks["valid_markEvidenceAsReviewedActionAvailable"] = "(markEvidenceAsReviewedActionAvailable <=> 'Yes')"
+
+        checks["valid_uploadAdditionalEvidenceActionAvailable"] = "(uploadAdditionalEvidenceActionAvailable <=> 'Yes')"
+
+        checks["valid_uploadAdditionalEvidenceHomeOfficeActionAvailable"] = "(uploadAdditionalEvidenceHomeOfficeActionAvailable <=> 'Yes')"
+
+        checks["valid_caseArgumentAvailable"] = (
+            """(
+                (dv_representation <=> 'LR' AND caseArgumentAvailable <=> 'Yes')
+                OR
+                (NOT(dv_representation <=> 'LR') AND caseArgumentAvailable IS NULL)
+            )"""
+        )
+
         return checks

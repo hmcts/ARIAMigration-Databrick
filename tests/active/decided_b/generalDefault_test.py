@@ -62,4 +62,58 @@ def test_caseFlagSetAsideReheardExists(spark,generalDefault_outputs):
     assert results["CASE002"]["caseFlagSetAsideReheardExists"] == "Yes"
     assert results["CASE003"]["caseFlagSetAsideReheardExists"] == "Yes"
 
+def test_uploadAddendumEvidenceActionAvailable(spark,generalDefault_outputs):
 
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["uploadAddendumEvidenceActionAvailable"] == "Yes"
+    assert results["CASE002"]["uploadAddendumEvidenceActionAvailable"] == "Yes"
+    assert results["CASE003"]["uploadAddendumEvidenceActionAvailable"] == "Yes"
+
+def test_markAddendumEvidenceAsReviewedActionAvailable(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["markAddendumEvidenceAsReviewedActionAvailable"] == "Yes"
+    assert results["CASE002"]["markAddendumEvidenceAsReviewedActionAvailable"] == "Yes"
+    assert results["CASE003"]["markAddendumEvidenceAsReviewedActionAvailable"] == "Yes"
+
+def test_uploadAddendumEvidenceLegalRepActionAvailable(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["uploadAddendumEvidenceLegalRepActionAvailable"] == "Yes"
+    assert results["CASE002"]["uploadAddendumEvidenceLegalRepActionAvailable"] == "Yes"
+    assert results["CASE003"]["uploadAddendumEvidenceLegalRepActionAvailable"] == "Yes"
+
+def test_uploadAddendumEvidenceHomeOfficeActionAvailable(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["uploadAddendumEvidenceHomeOfficeActionAvailable"] == "Yes"
+    assert results["CASE002"]["uploadAddendumEvidenceHomeOfficeActionAvailable"] == "Yes"
+    assert results["CASE003"]["uploadAddendumEvidenceHomeOfficeActionAvailable"] == "Yes"
+
+def test_uploadAddendumEvidenceAdminOfficerActionAvailable(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["uploadAddendumEvidenceAdminOfficerActionAvailable"] == "Yes"
+    assert results["CASE002"]["uploadAddendumEvidenceAdminOfficerActionAvailable"] == "Yes"
+    assert results["CASE003"]["uploadAddendumEvidenceAdminOfficerActionAvailable"] == "Yes"
+
+def test_reviewResponseActionAvailable(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["reviewResponseActionAvailable"] == "Yes"
+    assert results["CASE002"]["reviewResponseActionAvailable"] == "Yes"
+    assert results["CASE003"]["reviewResponseActionAvailable"] == "Yes"
+
+def test_uploadHomeOfficeAppealResponseActionAvailable(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["uploadHomeOfficeAppealResponseActionAvailable"] == "No"
+    assert results["CASE002"]["uploadHomeOfficeAppealResponseActionAvailable"] == "No"
+    assert results["CASE003"]["uploadHomeOfficeAppealResponseActionAvailable"] == "No"

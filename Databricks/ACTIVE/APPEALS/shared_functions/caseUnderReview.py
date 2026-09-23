@@ -13,10 +13,16 @@ def generalDefault(silver_m1):
             .drop(col("dv_representation"))
     )
 
-    df = df.select(
-        "*",
-        lit("Yes").alias("caseArgumentAvailable")
+    df = (
+        df.select(
+            "*",
+            lit("Yes").alias("caseArgumentAvailable")
+        )
+        .withColumn("markEvidenceAsReviewedActionAvailable", lit("Yes"))
+        .withColumn("uploadAdditionalEvidenceActionAvailable", lit("Yes"))
+        .withColumn("uploadAdditionalEvidenceHomeOfficeActionAvailable", lit("Yes"))
     )
+    
 
     return df
 

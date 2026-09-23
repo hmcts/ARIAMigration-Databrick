@@ -633,6 +633,12 @@ def generalDefault(silver_m1):
     general_df = (
         general_df
         .withColumn("isFtpaListVisible", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceActionAvailable", lit("No"))
+        .withColumn("markAddendumEvidenceAsReviewedActionAvailable", lit("No"))
+        .withColumn("uploadAddendumEvidenceLegalRepActionAvailable", lit("No"))
+        .withColumn("uploadAddendumEvidenceHomeOfficeActionAvailable", lit("No"))
+        .withColumn("uploadAddendumEvidenceAdminOfficerActionAvailable", lit("No"))
+        .withColumn("uploadHomeOfficeAppealResponseActionAvailable", lit("Yes"))
     )
 
     return general_df

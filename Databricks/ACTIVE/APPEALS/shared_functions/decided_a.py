@@ -333,6 +333,8 @@ def generalDefault(silver_m1):
     general_df = (
         general_df
         .withColumn("appealDecisionAvailable", lit("Yes"))
+        .withColumn("haveHearingAttendeesAndDurationBeenRecorded", lit("Yes"))
+        .drop("decisionAndReasonsAvailable")
     )
 
     return general_df

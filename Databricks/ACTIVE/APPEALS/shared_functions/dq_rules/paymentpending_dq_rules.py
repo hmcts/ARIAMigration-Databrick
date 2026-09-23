@@ -5,6 +5,139 @@ class paymentPendingDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
+        checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_case_state()
+        checks = checks | self.get_checks_appeal_type()
+        checks = checks | self.get_checks_flags_labels()
+        checks = checks | self.get_checks_legal_rep_details()
+        checks = checks | self.get_checks_payment_type()
+
+        return checks
+
+    def get_checks_general_default(self, checks={}):
+        checks["valid_sendDirectionActionAvailable"] = "(sendDirectionActionAvailable <=> 'Yes')"
+
+        checks["valid_changeDirectionDueDateActionAvailable"] = "(changeDirectionDueDateActionAvailable <=> 'No')"
+
+        checks["valid_markEvidenceAsReviewedActionAvailable"] = "(markEvidenceAsReviewedActionAvailable <=> 'No')"
+
+        checks["valid_uploadAdditionalEvidenceActionAvailable"] = "(uploadAdditionalEvidenceActionAvailable <=> 'No')"
+
+        checks["valid_uploadAdditionalEvidenceHomeOfficeActionAvailable"] = "(uploadAdditionalEvidenceHomeOfficeActionAvailable <=> 'No')"
+
+        checks["valid_haveHearingAttendeesAndDurationBeenRecorded"] = "(haveHearingAttendeesAndDurationBeenRecorded <=> 'No')"
+
+        checks["valid_uploadAddendumEvidenceActionAvailable"] = "(uploadAddendumEvidenceActionAvailable <=> 'No')"
+
+        checks["valid_markAddendumEvidenceAsReviewedActionAvailable"] = "(markAddendumEvidenceAsReviewedActionAvailable <=> 'No')"
+
+        checks["valid_uploadAddendumEvidenceLegalRepActionAvailable"] = "(uploadAddendumEvidenceLegalRepActionAvailable <=> 'No')"
+
+        checks["valid_uploadAddendumEvidenceHomeOfficeActionAvailable"] = "(uploadAddendumEvidenceHomeOfficeActionAvailable <=> 'No')"
+
+        checks["valid_uploadAddendumEvidenceAdminOfficerActionAvailable"] = "(uploadAddendumEvidenceAdminOfficerActionAvailable <=> 'No')"
+
+        checks["valid_notificationsSent"] = "(notificationsSent IS NOT NULL AND size(notificationsSent) = 0)"
+
+        checks["valid_submitNotificationStatus"] = "(submitNotificationStatus <=> '')"
+
+        checks["valid_isFeePaymentEnabled"] = "(isFeePaymentEnabled <=> 'Yes')"
+
+        checks["valid_isRemissionsEnabled"] = "(isRemissionsEnabled <=> 'Yes')"
+
+        checks["valid_isOutOfCountryEnabled"] = "(isOutOfCountryEnabled <=> 'Yes')"
+
+        checks["valid_isIntegrated"] = "(isIntegrated <=> 'Yes')"
+
+        checks["valid_isNabaEnabled"] = "(isNabaEnabled <=> 'No')"
+
+        checks["valid_isNabaAdaEnabled"] = "(isNabaAdaEnabled <=> 'Yes')"
+
+        checks["valid_isNabaEnabledOoc"] = "(isNabaEnabledOoc <=> 'No')"
+
+        checks["valid_isCaseUsingLocationRefData"] = "(isCaseUsingLocationRefData <=> 'Yes')"
+
+        checks["valid_hasAddedLegalRepDetails"] = "(hasAddedLegalRepDetails <=> 'Yes')"
+
+        checks["valid_autoHearingRequestEnabled"] = "(autoHearingRequestEnabled <=> 'No')"
+
+        checks["valid_isDlrmFeeRemissionEnabled"] = "(isDlrmFeeRemissionEnabled <=> 'Yes')"
+
+        checks["valid_isDlrmFeeRefundEnabled"] = "(isDlrmFeeRefundEnabled <=> 'Yes')"
+
+        checks["valid_displayMarkAsPaidEventForPartialRemission"] = "(displayMarkAsPaidEventForPartialRemission <=> 'No')"
+
+        return checks
+
+    def get_checks_case_state(self, checks={}):
+        checks["valid_ariaMigrationTaskDueDays"] = "(ariaMigrationTaskDueDays <=> '14')"
+
+        return checks
+
+    def get_checks_appeal_type(self, checks={}):
+        base_conditions = "COALESCE(dv_representation IN ('LR', 'AIP') AND lu_appealType IS NOT NULL, FALSE)"
+        aip_conditions = "COALESCE(dv_representation <=> 'AIP' AND lu_appealType IS NOT NULL, FALSE)"
+
+        checks["valid_ccdReferenceNumberForDisplay"] = (
+            f"(({base_conditions} AND ccdReferenceNumberForDisplay <=> '') OR (NOT {base_conditions} AND ccdReferenceNumberForDisplay IS NULL))"
+        )
+
+        checks["valid_isAppealReferenceNumberAvailable"] = (
+            f"(({aip_conditions} AND isAppealReferenceNumberAvailable <=> 'Yes') OR (NOT {aip_conditions} AND isAppealReferenceNumberAvailable IS NULL))"
+        )
+
+        return checks
+
+    def get_checks_flags_labels(self, checks={}):
+        base_conditions = "COALESCE(dv_representation IN ('LR', 'AIP') AND lu_appealType IS NOT NULL, FALSE)"
+
+        checks["valid_s94bStatus"] = (
+            f"(({base_conditions} AND s94bStatus <=> 'No') OR (NOT {base_conditions} AND s94bStatus IS NULL))"
+        )
+
+        checks["valid_isAdmin"] = (
+            f"(({base_conditions} AND isAdmin <=> 'Yes') OR (NOT {base_conditions} AND isAdmin IS NULL))"
+        )
+
+        checks["valid_isEjp"] = (
+            f"(({base_conditions} AND isEjp <=> 'No') OR (NOT {base_conditions} AND isEjp IS NULL))"
+        )
+
+        return checks
+
+    def get_checks_legal_rep_details(self, checks={}):
+        lr_conditions = "COALESCE(dv_representation <=> 'LR' AND lu_appealType IS NOT NULL, FALSE)"
+
+        checks["valid_localAuthorityPolicy"] = (
+            f"(({lr_conditions} AND localAuthorityPolicy IS NOT NULL) OR (NOT {lr_conditions} AND localAuthorityPolicy IS NULL))"
+        )
+
+        checks["valid_localAuthorityPolicyOrgPolicyCaseAssignedRole"] = (
+            f"(({lr_conditions} AND localAuthorityPolicy.OrgPolicyCaseAssignedRole <=> '[LEGALREPRESENTATIVE]') OR (NOT {lr_conditions} AND localAuthorityPolicy IS NULL))"
+        )
+
+        checks["valid_localAuthorityPolicyOrgPolicyReference"] = (
+            f"(({lr_conditions} AND localAuthorityPolicy.OrgPolicyReference IS NULL) OR (NOT {lr_conditions} AND localAuthorityPolicy IS NULL))"
+        )
+
+        checks["valid_localAuthorityPolicyOrganisationId"] = (
+            f"(({lr_conditions} AND localAuthorityPolicy.Organisation.OrganisationID IS NULL) OR (NOT {lr_conditions} AND localAuthorityPolicy IS NULL))"
+        )
+
+        checks["valid_localAuthorityPolicyOrganisationName"] = (
+            f"(({lr_conditions} AND localAuthorityPolicy.Organisation.OrganisationName IS NULL) OR (NOT {lr_conditions} AND localAuthorityPolicy IS NULL))"
+        )
+
+        return checks
+
+    def get_checks_payment_type(self, checks={}):
+        checks["valid_hasServiceRequestAlready"] = """
+            (
+                (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND hasServiceRequestAlready <=> 'No')
+                OR
+                (NOT COALESCE(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'), FALSE) AND hasServiceRequestAlready IS NULL)
+            )
+        """
 
         return checks
 
@@ -77,13 +210,13 @@ class paymentPendingDQRules(DQRulesBase):
                     AND OutOfTimeIssue <=> True
                     AND (
                         (
-                            ariaDesiredState IS NOT NULL AND ariaDesiredState IN ('paymentPending', 'appealSubmitted')
+                            ariaDesiredState IS NOT NULL AND ariaDesiredState IN ('pendingPayment', 'appealSubmitted')
                             AND Outcome IS NOT NULL
                             AND NOT (Outcome <=> 0)
                         )
                         OR
                         (
-                            ariaDesiredState IS NULL OR ariaDesiredState NOT IN ('paymentPending', 'appealSubmitted')
+                            ariaDesiredState IS NULL OR ariaDesiredState NOT IN ('pendingPayment', 'appealSubmitted')
                         )
                     )
                 )
@@ -91,7 +224,7 @@ class paymentPendingDQRules(DQRulesBase):
                 (
                     recordedOutOfTimeDecision <=> 'No'
                     AND OutOfTimeIssue <=> True
-                    AND ariaDesiredState IS NOT NULL AND ariaDesiredState IN ('paymentPending', 'appealSubmitted')
+                    AND ariaDesiredState IS NOT NULL AND ariaDesiredState IN ('pendingPayment', 'appealSubmitted')
                     AND (Outcome IS NULL OR Outcome <=> 0)
                 )
             )
@@ -112,6 +245,22 @@ class paymentPendingDQRules(DQRulesBase):
             """    (OutOfTimeIssue <=> True AND NOT (Outcome_no_filter <=> 0) AND outOfTimeDecisionMaker <=> 'Tribunal Caseworker')
                 OR (outOfTimeDecisionMaker IS NULL)
             """
+        )
+
+        checks["valid_appealWasNotSubmittedReason"] = (
+            "(((dv_representation <=> 'LR' AND lu_appealType IS NOT NULL) AND appealWasNotSubmittedReason <=> 'This is an ARIA Migrated Case.') OR (NOT(dv_representation <=> 'LR' AND lu_appealType IS NOT NULL) AND appealWasNotSubmittedReason IS NULL))"
+        )
+
+        checks["valid_adminDeclaration1"] = (
+            "((lu_appealType IS NOT NULL AND adminDeclaration1 <=> array('hasDeclared')) OR (lu_appealType IS NULL AND adminDeclaration1 IS NULL))"
+        )
+
+        checks["valid_caseLinks"] = (
+            "((lu_appealType IS NOT NULL AND caseLinks IS NOT NULL AND size(caseLinks) = 0) OR (lu_appealType IS NULL AND caseLinks IS NULL))"
+        )
+
+        checks["valid_hasOtherAppeals"] = (
+            "((lu_appealType IS NOT NULL AND hasOtherAppeals <=> 'NotSure') OR (lu_appealType IS NULL AND hasOtherAppeals IS NULL))"
         )
 
         # ##############################
@@ -281,7 +430,7 @@ class paymentPendingDQRules(DQRulesBase):
                     NOT EXISTS(COALESCE(valid_categoryIdList, ARRAY()), x -> x IN (7, 25))
                 )
                 AND
-                ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name), caseFlags.details[0].value.name)
+                FORALL(caseFlags.details, x -> x.value.name <=> 'Other')
             )
         )"""
 
@@ -294,24 +443,10 @@ class paymentPendingDQRules(DQRulesBase):
         #   )
         # )
         # """
-        checks["valid_caseFlags_pathId_in_list"] = """
-        (
-            caseFlags.details IS NULL OR
-            caseFlags.details[0].value.path[0].id IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(caseFlags.details, x -> x.value.path[0].id),
-                caseFlags.details[0].value.path[0].id
-            )
-        )
-        """
         checks["valid_caseFlags_flagCode_in_list"] = """
         (
             caseFlags.details IS NULL OR
-            caseFlags.details[0].value.flagCode IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(caseFlags.details, x -> x.value.flagCode),
-                caseFlags.details[0].value.flagCode
-            )
+            FORALL(caseFlags.details, x -> x.value.flagCode IN ('CF0007', 'OT0001', 'CF0012'))
         )
         """
         # IF CategoryId not in [7,8,24,25,31,32,41] or lu_HOANRef is NULL then caseFlags is NULL
@@ -386,11 +521,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_caseFlags_hearingRelevant_in_list"] = """
         (
             caseFlags.details IS NULL OR
-            caseFlags.details[0].value.hearingRelevant IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(caseFlags.details, x -> x.value.hearingRelevant),
-                caseFlags.details[0].value.hearingRelevant
-            )
+            FORALL(caseFlags.details, x -> x.value.hearingRelevant IN ('Yes', 'No'))
         )
         """
 
@@ -400,11 +531,8 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_appellantLevelFlags_name_in_details"] = """
         (
-            appellantLevelFlags.details[0].value.name IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.name),
-                appellantLevelFlags.details[0].value.name
-            )
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.name IN ('Unaccompanied minor', 'Foreign national offender'))
         )
         """
 
@@ -420,31 +548,22 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_appellantLevelFlags_flagCode_in_details"] = """
         (
-            appellantLevelFlags.details[0].value.flagCode IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode),
-                appellantLevelFlags.details[0].value.flagCode
-            )
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.flagCode IN ('PF0013', 'PF0012'))
         )
         """
 
         checks["valid_appellantLevelFlags_flagComment_in_details"] = """
         (
-            appellantLevelFlags.details[0].value.flagComment IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.flagComment),
-                appellantLevelFlags.details[0].value.flagComment
-            )
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.flagComment IS NULL)
         )
         """
 
         checks["valid_appellantLevelFlags_hearingRelevant_in_details"] = """
         (
-            appellantLevelFlags.details[0].value.hearingRelevant IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.hearingRelevant),
-                appellantLevelFlags.details[0].value.hearingRelevant
-            )
+            appellantLevelFlags.details IS NULL OR
+            FORALL(appellantLevelFlags.details, x -> x.value.hearingRelevant IN ('Yes', 'No'))
         )
         """
 
@@ -762,6 +881,34 @@ class paymentPendingDQRules(DQRulesBase):
             )"""
         )
 
+        checks["valid_isHomeOfficeIntegrationEnabled"] = (
+            """(
+                (
+                    COALESCE(dv_representation IN ('LR', 'AIP') AND lu_appealType IS NOT NULL AND dv_CCDAppealType IN ('RP', 'PA'), FALSE)
+                    AND isHomeOfficeIntegrationEnabled <=> 'Yes'
+                )
+                OR
+                (
+                    NOT COALESCE(dv_representation IN ('LR', 'AIP') AND lu_appealType IS NOT NULL AND dv_CCDAppealType IN ('RP', 'PA'), FALSE)
+                    AND isHomeOfficeIntegrationEnabled IS NULL
+                )
+            )"""
+        )
+
+        checks["valid_homeOfficeNotificationsEligible"] = (
+            """(
+                (
+                    COALESCE(dv_representation IN ('LR', 'AIP') AND lu_appealType IS NOT NULL, FALSE)
+                    AND homeOfficeNotificationsEligible <=> 'Yes'
+                )
+                OR
+                (
+                    NOT COALESCE(dv_representation IN ('LR', 'AIP') AND lu_appealType IS NOT NULL, FALSE)
+                    AND homeOfficeNotificationsEligible IS NULL
+                )
+            )"""
+        )
+
         #########################################
         # ARIADM-799 (Documents)
         #########################################
@@ -784,7 +931,7 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_completeCaseReviewDate"] = (
             """(
-                NOT (ariaDesiredState <=> 'paymentPending')
+                NOT (ariaDesiredState <=> 'pendingPayment')
                 OR
                 completeCaseReviewDate <=> date_format(DateLodged, 'yyyy-MM-dd')
             )"""

@@ -134,8 +134,11 @@ class decidedADQRules(DQRulesBase):
         return checks
 
     def get_checks_general_default(self, checks={}):
-
         checks["valid_appealDecisionAvailable"] = ("(appealDecisionAvailable <=> 'Yes')")
+
+        checks["valid_haveHearingAttendeesAndDurationBeenRecorded"] = ("(haveHearingAttendeesAndDurationBeenRecorded <=> 'Yes')")
+
+        checks["valid_decisionAndReasonsAvailable"] = ("(decisionAndReasonsAvailable IS NULL)")
 
         return checks
 

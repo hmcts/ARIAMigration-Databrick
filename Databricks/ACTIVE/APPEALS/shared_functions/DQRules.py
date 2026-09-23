@@ -112,6 +112,9 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     if "completeCaseReviewDate" not in df_final.columns:
         df_final = df_final.withColumn("completeCaseReviewDate", lit(None).cast("string"))
 
+    if "decisionAndReasonsAvailable" not in df_final.columns:
+        df_final = df_final.withColumn("decisionAndReasonsAvailable", lit(None).cast("string"))
+
     # Base inputs
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 

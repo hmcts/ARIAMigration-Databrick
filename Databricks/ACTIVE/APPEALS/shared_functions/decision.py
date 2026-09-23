@@ -141,6 +141,16 @@ def generalDefault(silver_m1):
 
     general_df = (
         general_df
+        .withColumn("sendDirectionActionAvailable", lit("No"))
+        .withColumn("changeDirectionDueDateActionAvailable", lit("No"))
+        .withColumn("markEvidenceAsReviewedActionAvailable", lit("No"))
+        .withColumn("uploadAddendumEvidenceActionAvailable", lit("Yes"))
+        .withColumn("uploadAdditionalEvidenceActionAvailable", lit("No"))
+        .withColumn("markAddendumEvidenceAsReviewedActionAvailable", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceLegalRepActionAvailable", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceHomeOfficeActionAvailable", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceAdminOfficerActionAvailable", lit("Yes"))
+        .withColumn("uploadAdditionalEvidenceHomeOfficeActionAvailable", lit("No"))
         .withColumn("hmcts", lit("[userImage:hmcts.png]"))
         .withColumn("stitchingStatus", lit("DONE"))
         .withColumn("bundleConfiguration", lit("iac-hearing-bundle-config.yaml"))

@@ -8,7 +8,6 @@ import json
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType, BooleanType
-from collections import defaultdict
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
@@ -610,104 +609,46 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
                 ).alias("value")
         )
 
-    case_flag_groups = defaultdict(list)
-    for cat_id, data in case_flag_lookup.items():
-        case_flag_groups[data["code"]].append(cat_id)
+    def flag_key(data):
+        return struct(
+            lit(data["name"]).alias("name"),
+            lit(data["code"]).alias("code"),
+            lit(data["comment"]).cast("string").alias("comment"),
+            lit(data["hearing"]).alias("hearing")
+        )
 
     def generate_case_flag_details(col_category_ids, col_hoanref):
 
-        flags = []
+        key_entries = [
+            when(array_contains(col_category_ids, lit(cat_id)), array(flag_key(data))).otherwise(array())
+            for cat_id, data in case_flag_lookup.items()
+        ]
 
-        # -----------------------------------------------------
-        # 1. Deduplicated OT0001 flags
-        # -----------------------------------------------------
-        ot0001_cat_ids = case_flag_groups["OT0001"]
-
-        # Use first entry to get default metadata (all share same structure except comment)
-        base_ot0001_data = case_flag_lookup[ot0001_cat_ids[0]]
-
-        # Condition: ANY of the OT0001 category IDs present OR HOREQ is not null
-        ot0001_condition = (
-            col_hoanref.isNotNull()
-            | array_contains(col_category_ids, lit(ot0001_cat_ids[0]))
-            | array_contains(col_category_ids, lit(ot0001_cat_ids[1]))
-            | array_contains(col_category_ids, lit(ot0001_cat_ids[2]))
-            | array_contains(col_category_ids, lit(ot0001_cat_ids[3]))
-            | array_contains(col_category_ids, lit(ot0001_cat_ids[4]))
+        ot0001_base = next(data for data in case_flag_lookup.values() if data["code"] == "OT0001")
+        key_entries.append(
+            when(col_hoanref.isNotNull(), array(flag_key({**ot0001_base, "comment": "Dropped Case"}))).otherwise(array())
         )
 
-        # Create ONE OT0001 flag; choose a consistent comment:
-        # If HOANRef triggers it → "Dropped Case"; otherwise use default comment ("Expedite")
-        ot0001_comment = when(col_hoanref.isNotNull(), "Dropped Case") \
-            .when(array_contains(col_category_ids, lit(8)), "Reclassified RFT") \
-            .when(array_contains(col_category_ids, lit(24)), "EEA Family Permit") \
-            .otherwise("Expedite")
+        unique_keys = F.array_distinct(F.flatten(F.array(*key_entries)))
 
-        flags.append((
-            ot0001_condition,
-            make_flag_struct(
-                base_ot0001_data["name"],
-                base_ot0001_data["code"],
-                ot0001_comment,
-                base_ot0001_data["hearing"]
-            )
-        ))
-
-        # -----------------------------------------------------
-        # 2. Add non-OT0001 flags normally
-        # -----------------------------------------------------
-        for cat_id, data in case_flag_lookup.items():
-            if data["code"] != "OT0001":
-                flags.append((
-                    array_contains(col_category_ids, lit(cat_id)),
-                    make_flag_struct(**data)
-                ))
-
-        # -----------------------------------------------------
-        # 3. Build flattened array output
-        # -----------------------------------------------------
-        exprs = [when(cond, array(flag)).otherwise(array()) for cond, flag in flags]
-        return F.flatten(F.array(*exprs))
-
-    # Build a reverse mapping: flagCode -> list of category IDs that map to it
-    appellant_flag_groups = defaultdict(list)
-    for cat_id, data in appellant_flag_lookup.items():
-        appellant_flag_groups[data["code"]].append(cat_id)
+        return F.transform(unique_keys, lambda k: make_flag_struct(k["name"], k["code"], k["comment"], k["hearing"]))
 
     def generate_appellant_flag_details(col_category_ids, col_detained):
 
-        flags = []
+        key_entries = [
+            when(array_contains(col_category_ids, lit(cat_id)), array(flag_key(data))).otherwise(array())
+            for cat_id, data in appellant_flag_lookup.items()
+        ]
 
-        # --- handle grouped PF0012 case so only ONE flag is ever created ---
-        pf0012_cat_ids = appellant_flag_groups["PF0012"]
-        pf0012_data = appellant_flag_lookup[pf0012_cat_ids[0]]  # All have same structure
+        key_entries.append(
+            when(col_detained.isin(1, 2, 4),
+                array(flag_key({"name": "Detained individual", "code": "PF0019", "comment": None, "hearing": "No"}))
+            ).otherwise(array())
+        )
 
-        flags.append((
-            array_contains(col_category_ids, lit(pf0012_cat_ids[0]))
-            | array_contains(col_category_ids, lit(pf0012_cat_ids[1]))
-            | array_contains(col_category_ids, lit(pf0012_cat_ids[2]))
-            | array_contains(col_category_ids, lit(pf0012_cat_ids[3]))
-            | array_contains(col_category_ids, lit(pf0012_cat_ids[4]))
-            | array_contains(col_category_ids, lit(pf0012_cat_ids[5]))
-            | array_contains(col_category_ids, lit(pf0012_cat_ids[6])),
-            make_appellant_flag_struct(**pf0012_data)
-        ))
+        unique_keys = F.array_distinct(F.flatten(F.array(*key_entries)))
 
-        # --- handle flags that are NOT PF0012 normally ---
-        for cat_id, data in appellant_flag_lookup.items():
-            if data["code"] != "PF0012":
-                flags.append((array_contains(col_category_ids, lit(cat_id)),
-                            make_appellant_flag_struct(**data)))
-
-        # --- detained rule ---
-        flags.append((
-            col_detained.isin(1, 2, 4),
-            make_appellant_flag_struct("Detained individual", "PF0019", None, "No")
-        ))
-
-        # Build the array
-        exprs = [when(cond, array(flag)).otherwise(array()) for cond, flag in flags]
-        return F.flatten(F.array(*exprs))
+        return F.transform(unique_keys, lambda k: make_appellant_flag_struct(k["name"], k["code"], k["comment"], k["hearing"]))
 
     ## Applying flag generators
     grouped = grouped.withColumn("caseFlagDetails", generate_case_flag_details(col("CategoryIds"), col("HOANRef")))

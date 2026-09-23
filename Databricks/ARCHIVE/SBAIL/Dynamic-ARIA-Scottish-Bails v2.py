@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # MAGIC %md 
 # MAGIC
 # MAGIC # Bail Cases
@@ -1113,6 +1117,7 @@ def bronze_sbail_ac_bfdiary_bftype():
         .join(dp.read("raw_bf_type").alias("bft"), col("bfd.BFTypeId") == col("bft.BFTypeId"), "left_outer")
         .select(
             trim(col("bfd.CaseNo")).alias("CaseNo"),
+            col("bfd.BFID"),
             col("bfd.BFDate"),
             col("bfd.Entry") ,
             col("bfd.EntryDate"),
@@ -1694,14 +1699,16 @@ def silver_m1():
     m1_df = dp.read("bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang").alias("m1")
     m4_df = dp.read('bronze_sbail_ac_bfdiary_bftype').alias('m4')
 
+    window = Window.partitionBy("m4.CaseNo").orderBy(col("BFID").desc())
+
     segmentation_df = dp.read("silver_scottish_sbails_funds").alias("bs")
     
-    joined_df = m1_df.join(segmentation_df.alias("bs"), trim(col("m1.CaseNo")) == col("bs.CaseNo"), "inner"
-                       ).join(m4_df, col("m1.CaseNo") == col("m4.CaseNo"), "left")
+    joined_df = m1_df.join(segmentation_df.alias("bs"), trim(col("m1.CaseNo")) == trim(col("bs.CaseNo")), "inner"
+                       ).join(m4_df, trim(col("m1.CaseNo")) == trim(col("m4.CaseNo")), "left")
 
     selected_columns = [col(c) for c in m1_df.columns if c!= "CaseNo"]
     
-    df = joined_df.select(trim("m1.CaseNo").alias("CaseNo"), *selected_columns,
+    df = joined_df.withColumn("rn", row_number().over(window)).select(trim("m1.CaseNo").alias("CaseNo"), *selected_columns,
                         col("bs.BaseBailType"),
                         when(col("BaseBailType") == "Normal Bail","Bail").
                         when(col("BaseBailType") == "BailLegalHold","Bail").
@@ -1735,10 +1742,9 @@ def silver_m1():
                         #Adding File Location information per 1437
                         concat_ws(", ", col("m1.FileLocationHearingCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation"),
                         when(col("m4.Entry").isNotNull() & col("m4.DateCompleted").isNull(), "B/F entries exist").otherwise(lit("")).alias("BFEntry")
-    
-    )
+    ).filter(col("rn") == 1)
 
-    return df.dropDuplicates(["CaseNo"])
+    return df
 
 # COMMAND ----------
 

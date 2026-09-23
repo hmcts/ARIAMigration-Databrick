@@ -39,7 +39,7 @@ from pyspark import pipelines as dp
 
 # COMMAND ----------
 
-spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "true")
 
 
 # COMMAND ----------
@@ -561,8 +561,7 @@ def raw_caseadjudicator():
      return read_latest_parquet("CaseAdjudicator", "tv_caseadjudicator", "ARIA_ARM_APPEALS")
 
 @dp.table(
-name="raw_stmcases",
-comment="Declarative Pipeline ARIA AppealTypeCategory.")
+name="raw_stmcases", comment="Declarative Pipeline ARIA AppealTypeCategory.")
 def raw_stmcases():
     return read_latest_parquet("STMCases", "tv_stmcases", "ARIA_ARM_APPEALS")
 
@@ -2525,162 +2524,6 @@ def silver_list_detail():
                               col("adj3.JudgeValue").alias("Label3_JudgeValue"),
                               col("adj4.JudgeValue").alias("CourtClerkUsher")
                           )
-
-    return joined_df
-
-    adjudicator_details = (
-        appeals_df
-        .filter(col("Position").isin(10, 11, 12, 3))
-        .select(
-            "CaseNo",
-            "Position",
-            "StatusId",
-            "CaseStatus",
-            concat_ws(
-                "",
-                col("ListAdjudicatorSurname"),
-                lit(", "),
-                col("ListAdjudicatorForenames"),
-                lit(" ("),
-                col("ListAdjudicatorTitle"),
-                lit(")")
-            ).alias("JudgeValue")
-        )
-    )
-
-    joined_df = appeals_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner")\
-                          .join(adjudicator_details.alias("adj1"),
-                                (col("adj1.CaseNo") == col("ca.CaseNo")) &
-                                (col("adj1.StatusId") == col("ca.StatusId")) &
-                                (col("adj1.Position") == lit(10)) &
-                                (col("adj1.CaseStatus") == col("ca.CaseStatus")),
-                                "left")\
-                          .join(adjudicator_details.alias("adj2"),
-                                (col("adj2.CaseNo") == col("ca.CaseNo")) &
-                                (col("adj2.StatusId") == col("ca.StatusId")) &
-                                (col("adj2.Position") == lit(11)) &
-                                (col("adj2.CaseStatus") == col("ca.CaseStatus")),
-                                "left")\
-                          .join(adjudicator_details.alias("adj3"),
-                                (col("adj3.CaseNo") == col("ca.CaseNo")) &
-                                (col("adj3.StatusId") == col("ca.StatusId")) &
-                                (col("adj3.Position") == lit(12)) &
-                                (col("adj3.CaseStatus") == col("ca.CaseStatus")),
-                                "left")\
-                          .join(adjudicator_details.alias("adj4"),
-                                (col("adj4.CaseNo") == col("ca.CaseNo")) &
-                                (col("adj4.StatusId") == col("ca.StatusId")) &
-                                (col("adj4.Position") == lit(3)) &
-                                (col("adj4.CaseStatus") == col("ca.CaseStatus")),
-                                "left")\
-                          .withColumn("TimeEstimate_hh_mm",
-                                      expr("floor(ca.TimeEstimate / 60) || ':' || lpad(cast(ca.TimeEstimate % 60 as string), 2, '0')"))\
-                          .withColumn("utj", coalesce(col("ca.UpperTribJudge"), lit(0)))\
-                          .withColumn("djt", coalesce(col("ca.DesJudgeFirstTier"), lit(0)))\
-                          .withColumn("jt", coalesce(col("ca.JudgeFirstTier"), lit(0)))\
-                          .withColumn("nlm", coalesce(col("ca.NonLegalMember"), lit(0)))\
-                          .withColumn("JudgeLabel1",
-                                      expr("""
-                                      case
-                                        when utj >= 1 then 'Upper Trib Judge'
-                                        when utj = 0 and djt >= 1 then 'Des Judge First Tier'
-                                        when utj = 0 and djt = 0 and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        else null
-                                      end
-                                      """))\
-                          .withColumn("JudgeLabel2",
-                                      expr("""
-                                      case
-                                        when utj >= 2 then 'Upper Trib Judge'
-                                        when utj in (1) and djt >= 1 then 'Des Judge First Tier'
-                                        when utj = 0 and djt >= 2 then 'Des Judge First Tier'
-                                        when utj in (1) and djt = 0 and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt in (1) and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt = 0 and jt >= 2 then 'Judge First Tier'
-                                        when utj in (1) and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt in (1) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt in (1) and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 2 then 'Non-Legal Member'
-                                        else null
-                                      end
-                                      """))\
-                          .withColumn("JudgeLabel3",
-                                      expr("""
-                                      case
-                                        when utj >= 3 then 'Upper Trib Judge'
-                                        when utj in (2) and djt >= 1 then 'Des Judge First Tier'
-                                        when utj in (1) and djt >= 2 then 'Des Judge First Tier'
-                                        when utj = 0 and djt >= 3 then 'Des Judge First Tier'
-                                        when utj in (2) and djt = 0 and jt >= 1 then 'Judge First Tier'
-                                        when utj in (1) and djt in (1) and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt in (2) and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt in (1) and jt >= 2 then 'Judge First Tier'
-                                        when utj = 0 and djt = 0 and jt >= 3 then 'Judge First Tier'
-                                        when utj in (2) and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj in (1) and djt in (1) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt in (2) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt in (1) and jt in (1) and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt in (2) and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt in (1) and nlm >= 2 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 3 then 'Non-Legal Member'
-                                        else null
-                                      end
-                                      """))\
-                          .withColumn(
-                                      "JudgeValue_full",
-                                      concat_ws("",
-                                          col("ca.ListAdjudicatorSurname"),
-                                          lit(", "),
-                                          col("ca.ListAdjudicatorForenames"),
-                                          lit(" ("),
-                                          col("ca.ListAdjudicatorTitle"),
-                                          lit(")")
-                                      )
-                                  )\
-                          .select(
-                              "ca.CaseNo",
-                              "ca.Outcome",
-                              "ca.CaseStatus",
-                              "ca.StatusId",
-                              col("TimeEstimate_hh_mm").alias("TimeEstimate"),
-                              "ca.ListNumber",
-                              "ca.HearingDuration",
-                              date_format(col("ca.StartTime"), 'HH:mm').alias("StartTime"),
-                              "ca.HearingTypeDesc",
-                              "ca.HearingTypeEst",
-                              "ca.DoNotUse",
-                              "ca.ListAdjudicatorId",
-                              "ca.ListAdjudicatorSurname",
-                              "ca.ListAdjudicatorForenames",
-                              "ca.ListAdjudicatorNote",
-                              "ca.ListAdjudicatorTitle",
-                              "ca.ListName",
-                              "ca.ListId",
-                            #   "ca.ListStartTime",
-                              date_format(col("ca.ListStartTime"), 'h:mm a').alias("ListStartTime"),
-                              "ca.ListTypeDesc",
-                              "ca.ListType",
-                              "ca.DoNotUseListType",
-                              "ca.CourtName",
-                              "ca.DoNotUseCourt",
-                              "ca.HearingCentreDesc",
-                              "ca.Chairman",
-                              "ca.Position",
-                              "ca.UpperTribJudge",
-                              "ca.DesJudgeFirstTier",
-                              "ca.JudgeFirstTier",
-                              "ca.NonLegalMember",
-                              "JudgeLabel1",
-                              "JudgeLabel2",
-                              "JudgeLabel3",
-                              col("JudgeValue_full").alias("JudgeValue"),
-                              col("adj1.JudgeValue").alias("Label1_JudgeValue"),
-                              col("adj2.JudgeValue").alias("Label2_JudgeValue"),
-                              col("adj3.JudgeValue").alias("Label3_JudgeValue"),
-                              col("adj4.JudgeValue").alias("CourtClerkUsher")
-                          )
-
 
     return joined_df
 

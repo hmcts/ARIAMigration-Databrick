@@ -532,24 +532,14 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_appellantLevelFlags_name_in_details"] = """
         (
             appellantLevelFlags.details IS NULL OR
-            FORALL(appellantLevelFlags.details, x -> x.value.name IN ('Unaccompanied minor', 'Foreign national offender'))
-        )
-        """
-
-        checks["valid_appellantLevelFlags_path_id_in_details"] = """
-        (
-            appellantLevelFlags.details[0].value.path[0].id IS NULL OR
-            ARRAY_CONTAINS(
-                TRANSFORM(appellantLevelFlags.details, x -> x.value.path[0].id),
-                appellantLevelFlags.details[0].value.path[0].id
-            )
+            FORALL(appellantLevelFlags.details, x -> x.value.name IN ('Unaccompanied minor', 'Foreign national offender', 'Detained individual'))
         )
         """
 
         checks["valid_appellantLevelFlags_flagCode_in_details"] = """
         (
             appellantLevelFlags.details IS NULL OR
-            FORALL(appellantLevelFlags.details, x -> x.value.flagCode IN ('PF0013', 'PF0012'))
+            FORALL(appellantLevelFlags.details, x -> x.value.flagCode IN ('PF0013', 'PF0012', 'PF0019'))
         )
         """
 

@@ -555,7 +555,7 @@ def test_ftpaApplicationDeadline_combined(test_df):
         # per-case appeal category (37 in-country / 38 OOC), independent of the max-StatusId row
         test_df = test_df.withColumn(
             "appeal_cat",
-            F.max(F.when(col("CategoryId").isin(37, 38), col("CategoryId"))).over(Window.partitionBy("appealReferenceNumber"))
+            F.min(F.when(col("CategoryId").isin(37, 38), col("CategoryId"))).over(Window.partitionBy("appealReferenceNumber"))
         )
 
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))

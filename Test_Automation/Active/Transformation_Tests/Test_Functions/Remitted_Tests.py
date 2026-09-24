@@ -29,7 +29,11 @@ def test_default_mapping_init(json):
             "remittalDocuments",
             "ariaDesiredState",
             "ftpaFinalDecisionForDisplay",
-            "uploadOtherRemittalDocs"
+            "uploadOtherRemittalDocs",
+            "ftpaAppellantDocuments",
+            "ftpaAppellantGroundsDocuments",
+            "ftpaAppellantEvidenceDocuments",
+            "ftpaAppellantOutOfTimeDocuments"
         )
         return test_df, True
     except Exception as e:
@@ -49,7 +53,11 @@ def test_remitted_defaultValues(test_df, fields_to_exclude):
 
         expected_arrays = {
            "remittalDocuments": None,
-           "uploadOtherRemittalDocs": None
+           "uploadOtherRemittalDocs": None,
+           "ftpaAppellantDocuments": None,
+            "ftpaAppellantGroundsDocuments": None,
+            "ftpaAppellantEvidenceDocuments": None,
+            "ftpaAppellantOutOfTimeDocuments": None
         }
         
         results_list = []
@@ -71,6 +79,30 @@ def test_remitted_defaultValues(test_df, fields_to_exclude):
                     field, 
                     "PASS", 
                     f"Checked Default Mapping for : {field} - found correct value : {expected}", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+
+        for field in expected_arrays.keys():
+            if field in fields_to_exclude:
+                continue
+            
+            fail_condition = col(field).isNotNull() & (size(col(field)) > 0)
+            
+            if test_df.filter(fail_condition).count() > 0:
+                failing_count = test_df.filter(fail_condition).count()
+                results_list.append(TestResult(
+                    field, 
+                    "FAIL", 
+                    f"Failed to check Default Mapping for array: {field} - expected empty or null - found {failing_count} records with data", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+            else:
+                results_list.append(TestResult(
+                    field, 
+                    "PASS", 
+                    f"Checked Default Mapping for array: {field} - correctly empty or null", 
                     test_from_state,
                     inspect.stack()[0].function
                 ))

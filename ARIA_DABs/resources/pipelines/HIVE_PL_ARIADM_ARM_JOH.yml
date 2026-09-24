@@ -1,0 +1,17 @@
+resources:
+  pipelines:
+    hive_pipeline_pl_ariadm_arm_joh:
+      name: HIVE_PL_ARIADM_ARM_JOH
+      allow_duplicate_names: true
+      clusters:
+        - label: default
+          instance_pool_id: ${var.instance_pool_id}
+          autoscale:
+            min_workers: 5
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ARCHIVE_FROM_MASTER/JOH/ARIADM_ARM_JOH"
+      target: hive_ARIADM_ARM_JOH
+      development: true

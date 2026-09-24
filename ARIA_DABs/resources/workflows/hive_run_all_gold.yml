@@ -1,0 +1,104 @@
+resources:
+  jobs:
+    hive_run_all_gold_pipelines:
+      name: hive_run_all_gold_pipelines
+      tasks:
+        - task_key: hive_CUR
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_caseUnderReview_gold.id}
+            full_refresh: true
+        - task_key: hive_PP
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_paymentPending_gold.id}
+            full_refresh: true
+        - task_key: hive_APS
+          depends_on:
+            - task_key: hive_PP
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_appealSubmitted_gold.id}
+            full_refresh: true
+        - task_key: hive_AREa
+          depends_on:
+            - task_key: hive_APS
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_awaitingRespondentEvidenceA_gold.id}
+            full_refresh: true
+        - task_key: hive_AREb
+          depends_on:
+            - task_key: hive_AREa
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_awaitingRespondentEvidenceB_gold.id}
+            full_refresh: true
+        - task_key: hive_RFAPS
+          depends_on:
+            - task_key: hive_CUR
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_reasonsForAppealSubmitted_gold.id}
+            full_refresh: true
+        - task_key: hive_decision
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_decision_gold.id}
+            full_refresh: true
+        - task_key: hive_decidedA
+          depends_on:
+            - task_key: hive_decision
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_decided_a_gold.id}
+            full_refresh: true
+        - task_key: hive_ftpaDecided
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_ftpa_decided_gold.id}
+            full_refresh: true
+        - task_key: hive_decidedB
+          depends_on:
+            - task_key: hive_ftpaDecided
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_decided_b_gold.id}
+            full_refresh: true
+        - task_key: hive_ended
+          depends_on:
+            - task_key: hive_decidedB
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_ended_gold.id}
+            full_refresh: true
+        - task_key: hive_ftpaSubmittedA
+          depends_on:
+            - task_key: hive_decidedA
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_ftpa_submitted_a_gold.id}
+            full_refresh: true
+        - task_key: hive_ftpaSubmittedB
+          depends_on:
+            - task_key: hive_ftpaSubmittedA
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_ftpa_submitted_b_gold.id}
+            full_refresh: true
+        - task_key: hive_listing
+          depends_on:
+            - task_key: hive_RFAPS
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_listing_gold.id}
+            full_refresh: true
+        - task_key: hive_PFH
+          depends_on:
+            - task_key: hive_listing
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_prepareForHearing_gold.id}
+            full_refresh: true
+        - task_key: hive_remitted
+          depends_on:
+            - task_key: hive_ended
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_remitted_gold.id}
+            full_refresh: true
+      job_clusters:
+        - job_cluster_key: hive_Job_cluster
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 1
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED

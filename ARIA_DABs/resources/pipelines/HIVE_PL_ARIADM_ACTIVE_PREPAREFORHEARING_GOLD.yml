@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    hive_pipeline_pl_prepareForHearing_gold:
+      name: HIVE_PL_prepareForHearing_gold
+      configuration:
+        pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
+      clusters:
+        - label: default
+          instance_pool_id: ${var.instance_pool_id}
+          autoscale:
+            min_workers: 1
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE_FROM_MASTER/APPEALS/GOLD_PREPARE_FOR_HEARING_JSON"
+      target: hive_prepareforhearing_gold
+      development: true

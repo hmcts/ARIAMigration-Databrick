@@ -1,0 +1,157 @@
+resources:
+  jobs:
+    hive_run_all_publish:
+      name: hive_run_all_publish
+      tasks:
+        - task_key: hive_PP
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: paymentPending
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_APS
+          depends_on:
+            - task_key: hive_PP
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: appealSubmitted
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_AREa
+          depends_on:
+            - task_key: hive_APS
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: awaitingRespondentEvidence(a)
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_AREb
+          depends_on:
+            - task_key: hive_AREa
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: awaitingRespondentEvidence(b)
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_CUR
+          depends_on:
+            - task_key: hive_AREb
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: caseUnderReview
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_RFAPS
+          depends_on:
+            - task_key: hive_CUR
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: reasonsForAppealSubmitted
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_listing
+          depends_on:
+            - task_key: hive_RFAPS
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: listing
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_PFH
+          depends_on:
+            - task_key: hive_listing
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: prepareForHearing
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_decision
+          depends_on:
+            - task_key: hive_PFH
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: decision
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_decidedA
+          depends_on:
+            - task_key: hive_decision
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: decided(a)
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_ftpaSubmittedA
+          depends_on:
+            - task_key: hive_decidedA
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: ftpaSubmitted(a)
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_ftpaSubmittedB
+          depends_on:
+            - task_key: hive_ftpaSubmittedA
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: ftpaSubmitted(b)
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_ftpaDecided
+          depends_on:
+            - task_key: hive_ftpaSubmittedB
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: ftpaDecided
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_decidedB
+          depends_on:
+            - task_key: hive_ftpaDecided
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: decided(b)
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_ended
+          depends_on:
+            - task_key: hive_decidedB
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: ended
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+        - task_key: hive_remitted
+          depends_on:
+            - task_key: hive_ended
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: remitted
+            source: WORKSPACE
+          job_cluster_key: hive_Job_cluster
+      job_clusters:
+        - job_cluster_key: hive_Job_cluster
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 1
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      queue:
+        enabled: true

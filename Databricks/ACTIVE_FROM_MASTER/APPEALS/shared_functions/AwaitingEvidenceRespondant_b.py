@@ -1,0 +1,33 @@
+from pyspark.sql.functions import lit
+from . import paymentPending as PP
+from . import AwaitingEvidenceRespondant_a as AERa
+
+
+def generalDefault(silver_m1): 
+    df_generalDefault = AERa.generalDefault(silver_m1)
+
+    df_generalDefault = (
+        df_generalDefault
+        .select("*",
+                lit("No").alias("uploadHomeOfficeBundleActionAvailable"))
+        .withColumn("uploadHomeOfficeBundleAvailable", lit("No"))
+    )
+
+    return df_generalDefault
+
+
+def documents(silver_m1): 
+    documents_df, documents_audit = PP.documents(silver_m1)
+    documents_df = (silver_m1.alias("m1").select("CaseNo").join(documents_df,on="CaseNo",how="left")
+    )
+
+    documents_df = (
+        documents_df
+        .select("*",
+                lit([]).cast("array<string>").alias("respondentDocuments"))
+    )
+    return documents_df, documents_audit
+
+
+if __name__ == "__main__":
+    pass

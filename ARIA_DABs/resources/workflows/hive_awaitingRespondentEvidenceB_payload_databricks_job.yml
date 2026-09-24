@@ -1,0 +1,40 @@
+resources:
+  jobs:
+    hive_awaitingRespondentEvidenceB_payload_databricks_job:
+      name: hive_awaitingRespondentEvidenceB_payload_databricks_job
+      job_clusters:
+        - job_cluster_key: hive_awaitingRespondentEvidenceB_payload_databricks_job
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 8
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      tasks:
+        - task_key: hive_run-my-wheel
+          job_cluster_key: hive_awaitingRespondentEvidenceB_payload_databricks_job
+          python_wheel_task:
+            entry_point: main
+            package_name: shared_functions
+          libraries: 
+            - whl: "dbfs:/FileStore/packages/hive_shared_functions-0.6.6-py3-none-any.whl"
+
+        - task_key: hive_DLT_awaitingRespondentEvidenceB
+          depends_on:
+            - task_key: hive_run-my-wheel
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_awaitingRespondentEvidenceB_gold.id}
+            full_refresh: true
+                
+        - task_key: hive_active_publish_EH_HTML_JSON
+          depends_on: 
+            - task_key: hive_DLT_awaitingRespondentEvidenceB
+          job_cluster_key: hive_awaitingRespondentEvidenceB_payload_databricks_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_Publish_EH_HTML_JSON"
+            source: WORKSPACE
+            base_parameters:
+              state: awaitingRespondentEvidence(b)
+
+      queue:
+        enabled: true

@@ -1,0 +1,20 @@
+resources:
+  jobs:
+    hive_ccd_case_linking_result_databricks_job:
+      name: hive_ccd_case_linking_result_databricks_job
+      job_clusters:
+        - job_cluster_key: hive_ccd_case_linking_result_databricks_job
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 2
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      tasks:
+        - task_key: hive_active_ccd_results_case_linking
+          job_cluster_key: hive_ccd_case_linking_result_databricks_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ACTIVE_FROM_MASTER/MVP/CaseLinking/Active_CCD_Results_Case_Linking"
+            source: WORKSPACE
+      queue:
+        enabled: true

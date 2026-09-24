@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    hive_pipeline_pl_listing_gold:
+      name: HIVE_PL_listing_gold
+      configuration:
+        pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
+      clusters:
+        - label: default
+          instance_pool_id: ${var.instance_pool_id}
+          autoscale:
+            min_workers: 5
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE_FROM_MASTER/APPEALS/GOLD_LISTING_JSON"
+      target: hive_listing_gold
+      development: true

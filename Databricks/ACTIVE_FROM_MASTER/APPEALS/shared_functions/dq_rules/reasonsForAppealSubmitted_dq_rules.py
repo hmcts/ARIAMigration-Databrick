@@ -1,0 +1,53 @@
+from .dq_rules import DQRulesBase
+
+
+class reasonsForAppealSubmittedDQRules(DQRulesBase):
+
+    def get_checks(self, checks={}):
+        checks = checks | self.get_base_checks()
+
+        return checks
+
+    def get_base_checks(self, checks={}):
+
+        checks["valid_additionalInstructionsTribunalResponse"] = (
+            """
+                (
+                    (
+                        (hr_CaseStatus <=> 26)
+                        AND
+                        (dv_representation <=> 'AIP')
+                        AND
+                        (additionalInstructionsTribunalResponse IS NOT NULL)
+                        AND
+                        (LENGTH(additionalInstructionsTribunalResponse) <= 2000)
+                    )
+                    OR
+                    (
+                        (
+                            (NOT(hr_CaseStatus <=> 26))
+                            OR
+                            (NOT(dv_representation <=> 'AIP'))
+                        )
+                        AND
+                        (additionalInstructionsTribunalResponse IS NULL)
+                    )
+                )
+            """
+        )
+
+        checks["valid_markEvidenceAsReviewedActionAvailable"] = "(markEvidenceAsReviewedActionAvailable <=> 'Yes')"
+
+        checks["valid_uploadAdditionalEvidenceActionAvailable"] = "(uploadAdditionalEvidenceActionAvailable <=> 'Yes')"
+
+        checks["valid_uploadAdditionalEvidenceHomeOfficeActionAvailable"] = "(uploadAdditionalEvidenceHomeOfficeActionAvailable <=> 'Yes')"
+
+        checks["valid_reasonsForAppealDecision"] = (
+            """(
+                (dv_representation <=> 'AIP' AND reasonsForAppealDecision <=> 'This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.')
+                OR
+                (NOT(dv_representation <=> 'AIP') AND reasonsForAppealDecision IS NULL)
+            )"""
+        )
+
+        return checks

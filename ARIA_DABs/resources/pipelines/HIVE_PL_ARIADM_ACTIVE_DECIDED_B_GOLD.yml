@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    hive_pipeline_pl_decided_b_gold:
+      name: HIVE_PL_decided_b_gold
+      configuration:
+        pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
+      clusters:
+        - label: default
+          instance_pool_id: ${var.instance_pool_id}
+          autoscale:
+            min_workers: 5
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE_FROM_MASTER/APPEALS/GOLD_DECIDED_B_JSON"
+      target: hive_decidedB_gold
+      development: true

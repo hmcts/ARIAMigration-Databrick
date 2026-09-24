@@ -1,0 +1,20 @@
+resources:
+  jobs:
+    hive_cdam_result_databricks_job:
+      name: hive_cdam_result_databricks_job
+      job_clusters:
+        - job_cluster_key: hive_cdam_result_databricks_job
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 2
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      tasks:
+        - task_key: hive_active_results_cdam
+          job_cluster_key: hive_cdam_result_databricks_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ACTIVE_FROM_MASTER/MVP/CDAM/Active_CDAM_Results"
+            source: WORKSPACE
+      queue:
+        enabled: true

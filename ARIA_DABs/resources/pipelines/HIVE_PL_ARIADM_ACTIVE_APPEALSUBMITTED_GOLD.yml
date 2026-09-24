@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    hive_pipeline_pl_appealSubmitted_gold:
+      name: HIVE_PL_appealSubmitted_gold
+      configuration:
+        pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
+      clusters:
+        - label: default
+          instance_pool_id: ${var.instance_pool_id}
+          autoscale:
+            min_workers: 1
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE_FROM_MASTER/APPEALS/GOLD_APPEAL_SUBMITTED_JSON"
+      target: hive_appealSubmitted_gold
+      development: true

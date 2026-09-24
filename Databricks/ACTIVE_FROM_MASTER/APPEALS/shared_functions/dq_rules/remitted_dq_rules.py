@@ -1,0 +1,104 @@
+from .dq_rules import DQRulesBase
+
+
+class remittedDQRules(DQRulesBase):
+
+    def get_checks(self, checks={}):
+        checks = checks | self.get_checks_ftpa()
+        checks = checks | self.get_checks_remitted()
+        checks = checks | self.get_checks_document()
+        checks = checks | self.get_checks_general_default()
+
+        return checks
+
+    def get_checks_ftpa(self, checks={}):
+        checks["valid_ftpaFinalDecisionForDisplay"] = ("""
+            ftpaFinalDecisionForDisplay = "undecided"
+        """)
+
+        return checks
+
+    def get_checks_remitted(self, checks={}):
+
+        checks["valid_rehearingReason"] = ("""
+        (
+            rehearingReason = "Remitted" AND rehearingReason IS NOT NULL AND rehearingReason != ""
+        )
+        """)
+
+        checks["valid_allocatedJudge"] = (
+            """
+            (
+                (
+                    CaseStatus_decb <=> 39 AND
+                    (allocatedJudge <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
+                )
+                OR
+                (
+                    (CaseStatus_decb <> 39 OR CaseStatus_decb IS NULL) AND allocatedJudge IS NULL
+                )
+            )
+            """
+        )
+
+        checks["valid_allocatedJudgeEdit"] = (
+            """
+            (
+                (
+                    CaseStatus_decb <=> 39 AND
+                    (allocatedJudgeEdit <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
+                )
+                OR
+                (
+                    (CaseStatus_decb <> 39 OR CaseStatus_decb IS NULL) AND allocatedJudgeEdit IS NULL
+                )
+            )
+                """
+        )
+
+        checks["valid_sourceOfRemittal"] = ("""
+        (
+            sourceOfRemittal = "Upper Tribunal" AND sourceOfRemittal IS NOT NULL AND sourceOfRemittal != ""
+        )
+        """)
+
+        checks["valid_courtReferenceNumber"] = ("""
+        (
+            courtReferenceNumber <=> "This is a migrated ARIA case. Please refer to the documents."
+        )
+        """)
+
+        checks["valid_appealRemittedDate"] = (
+            """
+            (
+                (
+                    CaseStatus_rem IS NOT NULL AND CaseStatus_rem IN (42, 43, 44) AND Outcome_rem <=> 86
+                    AND appealRemittedDate <=> date_format(CAST(DecisionDate_rem AS timestamp), 'yyyy-MM-dd')
+                )
+                OR
+                (
+                    (CaseStatus_rem IS NULL OR CaseStatus_rem NOT IN (42, 43, 44) OR NOT (Outcome_rem <=> 86))
+                    AND appealRemittedDate IS NULL
+                )
+            )
+            """)
+
+
+        return checks
+
+    def get_checks_document(self, checks={}):
+
+        checks["valid_remittalDocuments"] = ("(COALESCE(size(remittalDocuments), 0) = 0) ")
+        checks["valid_uploadOtherRemittalDocs"] = ("(COALESCE(size(uploadOtherRemittalDocs), 0) = 0) ")
+        return checks
+
+
+    def get_checks_general_default(self, checks={}):
+        checks["valid_caseFlagSetAsideReheardExists"] = (
+            """
+                (caseFlagSetAsideReheardExists = 'Yes')
+                AND caseFlagSetAsideReheardExists IS NOT NULL
+                AND caseFlagSetAsideReheardExists != ""
+            """)
+
+        return checks

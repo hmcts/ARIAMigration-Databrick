@@ -1,0 +1,24 @@
+resources:
+  jobs:
+    hive_cdam_databricks_job:
+      name: hive_cdam_databricks_job
+      job_clusters:
+        - job_cluster_key: hive_cdam_databricks_job
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 4
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      tasks:
+        - task_key: hive_DLT_creation_of_cdam_html
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_ariadm_active_appeals_cdam_html.id}
+            full_refresh: true
+        - task_key: hive_active_cdam_publish
+          depends_on: 
+            - task_key: hive_DLT_creation_of_cdam_html
+          job_cluster_key: hive_cdam_databricks_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ACTIVE_FROM_MASTER/MVP/CDAM/Active_CDAM_Publish"
+            source: WORKSPACE

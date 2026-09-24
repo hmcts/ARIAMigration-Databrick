@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    hive_pipeline_pl_ftpa_submitted_b_gold:
+      name: HIVE_PL_ftpa_submitted_b_gold
+      configuration:
+        pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
+      clusters:
+        - label: default
+          instance_pool_id: ${var.instance_pool_id}
+          autoscale:
+            min_workers: 1
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE_FROM_MASTER/APPEALS/GOLD_FTPA_SUBMITTED_B_JSON"
+      target: hive_ftpaSubmittedB_gold
+      development: true

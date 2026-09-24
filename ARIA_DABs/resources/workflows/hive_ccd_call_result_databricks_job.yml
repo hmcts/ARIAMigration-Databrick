@@ -1,0 +1,33 @@
+resources:
+  jobs:
+    hive_ccd_call_result_databricks_job:
+      name: hive_ccd_call_result_databricks_job
+      job_clusters:
+        - job_cluster_key: hive_ccd_call_result_databricks_job
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 2
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      tasks:
+        - task_key: hive_run-my-wheel
+          job_cluster_key: hive_ccd_call_result_databricks_job
+          python_wheel_task:
+            entry_point: main
+            package_name: shared_functions
+          libraries: 
+            - whl: "dbfs:/FileStore/packages/hive_shared_functions-0.6.6-py3-none-any.whl"
+
+        - task_key: hive_active_CCD_call_result_EH
+          depends_on:
+            - task_key: hive_run-my-wheel       
+          job_cluster_key: hive_ccd_call_result_databricks_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ACTIVE_FROM_MASTER/MVP/Active_CCD_call_result_EH"
+            source: WORKSPACE
+            base_parameters:
+              state: paymentPending
+        
+      queue:
+        enabled: true

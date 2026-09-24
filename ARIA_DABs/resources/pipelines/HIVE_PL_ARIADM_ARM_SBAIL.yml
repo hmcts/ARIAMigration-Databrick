@@ -1,0 +1,19 @@
+resources:
+  pipelines:
+    hive_pipeline_aria_archive_sbails:
+      name: HIVE_ARIA_ARCHIVE_SBAIL
+      allow_duplicate_names: true
+      configuration:
+        pipeline.reset: "true"
+      clusters:
+        - label: default
+          instance_pool_id: ${var.instance_pool_id}
+          autoscale:
+            min_workers: 5
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ARCHIVE_FROM_MASTER/SBAIL/Dynamic-ARIA-Scottish-Bails v2"
+      target: hive_aria_s_bails
+      development: true

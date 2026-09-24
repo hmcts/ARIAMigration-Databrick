@@ -1,0 +1,17 @@
+resources:
+  pipelines:
+    hive_pipeline_pl_ariadm_arm_fta:
+      name: HIVE_PL_ARIADM_ARM_FTA
+      allow_duplicate_names: true
+      clusters:
+        - label: default
+          instance_pool_id: ${var.instance_pool_id}
+          autoscale:
+            min_workers: 5
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ARCHIVE_FROM_MASTER/APPEALS/ARIAFTA/ARIADM_ARM_APPEALS_FTA"
+      target: hive_ariadm_arm_fta
+      development: true

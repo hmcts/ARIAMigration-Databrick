@@ -146,6 +146,10 @@ stages:
                 uv build --wheel --out-dir $(Build.SourcesDirectory)/ARIA_DABs/dist \
                   $(Build.SourcesDirectory)/Databricks/ACTIVE/APPEALS
 
+                echo "Building wheel for ACTIVE_FROM_MASTER (hive)"
+                uv build --wheel --out-dir $(Build.SourcesDirectory)/ARIA_DABs/dist \
+                  $(Build.SourcesDirectory)/Databricks/ACTIVE_FROM_MASTER/APPEALS
+
                 echo "Listing dist contents after building the wheel"
                 ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
               displayName: 'Build Shared Python Wheel'
@@ -449,11 +453,22 @@ stages:
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   set -e
 
-                  WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | head -n 1)
+                  UC_WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "shared_functions-*.whl" | sort -V | head -n 1)
+                  HIVE_WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "hive_shared_functions-*.whl" | sort -V | head -n 1)
 
-                  if [ -n "$WHEEL_FILE" ]; then
+                  if [ -n "$UC_WHEEL_FILE" ] && [ -n "$HIVE_WHEEL_FILE" ]; then
+                    databricks fs mkdirs dbfs:/FileStore/packages
+                    databricks fs cp "$UC_WHEEL_FILE" "dbfs:/FileStore/packages/$(basename "$UC_WHEEL_FILE")" --overwrite --debug
+                    databricks fs cp "$HIVE_WHEEL_FILE" "dbfs:/FileStore/packages/$(basename "$HIVE_WHEEL_FILE")" --overwrite --debug
+                    databricks fs ls dbfs:/FileStore/packages
+                  else
+                    echo "Missing wheel file(s): UC=$UC_WHEEL_FILE HIVE=$HIVE_WHEEL_FILE"
+                    exit 1
+                  fi
+
+                  if [ -n "$UC_WHEEL_FILE" ]; then
                     DEST_PATH="dbfs:/Volumes/aria_${{ deployment.environment }}${{ lz.landing_zone }}/ariadm_active_appeals/packages"
-                    databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+                    databricks fs cp "$UC_WHEEL_FILE" "$DEST_PATH" --overwrite --debug
                     databricks fs ls "$DEST_PATH"
                     echo "UC wheel uploaded"
                   else

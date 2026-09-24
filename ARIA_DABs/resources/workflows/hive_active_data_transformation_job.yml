@@ -1,0 +1,23 @@
+resources:
+  jobs:
+    hive_active_data_transformation_job:
+      name: hive_active_data_transformation_job
+      job_clusters:
+        - job_cluster_key: hive_active_data_transformation_job
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 8
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      tasks:        
+        - task_key: hive_DLT_creation_of_content_bronze
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_ariadm_active_appeals_bronze.id}
+            full_refresh: true     
+        - task_key: hive_DLT_creation_of_content_silver
+          depends_on:
+            - task_key: hive_DLT_creation_of_content_bronze
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.hive_pipeline_pl_ariadm_active_appeals_silver.id}
+            full_refresh: true

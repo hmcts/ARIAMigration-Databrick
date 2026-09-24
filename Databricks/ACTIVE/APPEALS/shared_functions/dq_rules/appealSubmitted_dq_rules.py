@@ -168,23 +168,33 @@ class appealSubmittedDQRules(DQRulesBase):
 
         checks["valid_paidAmount"] = (
             """(
-                (
-                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
-                    AND SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
-                    AND
-                    (paidAmount <=> (
-                        CAST(ABS(CAST(AGGREGATE(
-                        TRANSFORM(valid_transactionList, x ->
-                            CASE
-                            WHEN (CAST(x.SumTotalPay AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
-                            THEN x.Amount
-                            ELSE 0
-                            END
-                        ),
-                        CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
-                        ) AS INT)) * 100 AS STRING)
-                    ))
+        (
+            (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
+            AND SIZE(FILTER(
+                valid_transactionList,
+                x -> x.TransactionTypeId = 3
+                    AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)
+            )) > 0
+            AND
+            (paidAmount <=> (
+                CAST(
+                    CAST(
+                        ABS(
+                            CAST(AGGREGATE(
+                                TRANSFORM(valid_transactionList, x ->
+                                    CASE
+                                    WHEN (CAST(x.SumTotalPay AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
+                                    THEN x.Amount
+                                    ELSE 0
+                                    END
+                                ),
+                                CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
+                            ) AS DECIMAL(19,4)) * 100
+                        ) AS INT
+                    ) AS STRING
                 )
+            ))
+        )
                 OR
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))

@@ -1162,7 +1162,7 @@ def test_amountRemitted_test1(test_df):
             (col("PaymentRemissionGranted") == 1)
         ) & 
         (
-            ((col("Total_Amount") * 100).cast("decimal(18,2)") != col("amountRemitted").cast("decimal(18,2)"))
+            ((F.abs(col("Total_Amount")) * 100).cast("decimal(18,2)") != col("amountRemitted").cast("decimal(18,2)"))
         )
         )
 

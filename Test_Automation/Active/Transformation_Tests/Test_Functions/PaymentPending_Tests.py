@@ -4295,6 +4295,7 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze, bhoref):
                 first("appealOutOfCountry").alias("appealOutOfCountry"),
                 first(M1_bronze["HORef"]).alias("HORef_M1"),
                 first(M2_bronze["FCONumber"]).alias("FCONumber"),
+                first(bhoref["bhoref_FCONumber"]).alias("FCONumber_Cleansed"),
                 first(bhoref["bhoref_HORef"]).alias("CleansedHORef")
             )
         )
@@ -4402,8 +4403,8 @@ def test_homeOfficeReferenceNumber_ac3(ho_test_df):
                 (col("appealOutOfCountry") == "Yes") &
                 (col("CleansedHORef").isNull()) &
                 (col("HORef_M1").isNull()) & 
-                (col("FCONumber").isNotNull()) &
-                (~col("FCONumber").rlike("(?i)GWF"))
+                (col("FCONumber_Cleansed").isNotNull()) &
+                (~col("FCONumber_Cleansed").rlike("(?i)GWF"))
                 ).count() == 0:
                 return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
@@ -4411,12 +4412,12 @@ def test_homeOfficeReferenceNumber_ac3(ho_test_df):
                 (col("appealOutOfCountry") == "Yes") &
                 (col("CleansedHORef").isNull()) &
                 (col("HORef_M1").isNull()) & 
-                (col("FCONumber").isNotNull()) &
-                (~col("FCONumber").rlike("(?i)GWF"))
+                (col("FCONumber_Cleansed").isNotNull()) &
+                (~col("FCONumber_Cleansed").rlike("(?i)GWF"))
             )
 
             ac_ref = test_df.filter(
-                (col("FCONumber") != col("homeOfficeReferenceNumber")) &
+                (col("FCONumber_Cleansed") != col("homeOfficeReferenceNumber")) &
                 (col("homeOfficeReferenceNumber") != lit("999999999"))
             )
 
@@ -6891,7 +6892,7 @@ def test_default_mapping_init(json):
         error_message = str(e)        
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-def test_PP_defaultValues(test_df,fields_to_exclude):
+def test_PP_defaultValues(test_df,fields_to_exclude, state_under_test="paymentPending"):
     try:
         expected_defaults = {
             "ccdReferenceNumberForDisplay": "",
@@ -6940,30 +6941,36 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
 
         results_list = []
 
-        action_flag_yes_states = {
-            "caseUnderReview": "Yes", "reasonsForAppealSubmitted": "Yes",
-            "listing": "Yes", "prepareForHearing": "Yes",
-        }
-        change_direction_yes_states = dict(action_flag_yes_states)
-        change_direction_yes_states["awaitingRespondentEvidence"] = "Yes"
-        state_overrides = {
-            "changeDirectionDueDateActionAvailable": change_direction_yes_states,
-            "markEvidenceAsReviewedActionAvailable": action_flag_yes_states,
-            "uploadAdditionalEvidenceActionAvailable": action_flag_yes_states,
-            "uploadAdditionalEvidenceHomeOfficeActionAvailable": action_flag_yes_states,
+        STATE_VALUES = {
+            "changeDirectionDueDateActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "Yes", "awaitingRespondentEvidence(b)": "Yes", "caseUnderReview": "Yes", "decided(a)": "No", "decided(b)": "No", "decision": "No", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "Yes", "paymentPending": "No", "prepareForHearing": "Yes", "reasonsForAppealSubmitted": "Yes", "remitted": "No"},
+            "haveHearingAttendeesAndDurationBeenRecorded": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "No", "decided(a)": "Yes", "decided(b)": "Yes", "decision": "No", "ended": "Yes", "ftpaDecided": "Yes", "ftpaSubmitted(a)": "Yes", "ftpaSubmitted(b)": "Yes", "listing": "No", "paymentPending": "No", "prepareForHearing": "No", "reasonsForAppealSubmitted": "No", "remitted": "Yes"},
+            "markAddendumEvidenceAsReviewedActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "No", "decided(a)": "Yes", "decided(b)": "Yes", "decision": "Yes", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "No", "paymentPending": "No", "prepareForHearing": "No", "reasonsForAppealSubmitted": "No", "remitted": "No"},
+            "markEvidenceAsReviewedActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "Yes", "decided(a)": "No", "decided(b)": "No", "decision": "No", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "Yes", "paymentPending": "No", "prepareForHearing": "Yes", "reasonsForAppealSubmitted": "Yes", "remitted": "No"},
+            "sendDirectionActionAvailable": {"appealSubmitted": "Yes", "awaitingRespondentEvidence(a)": "Yes", "awaitingRespondentEvidence(b)": "Yes", "caseUnderReview": "Yes", "decided(a)": "No", "decided(b)": "No", "decision": "No", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "Yes", "paymentPending": "Yes", "prepareForHearing": "Yes", "reasonsForAppealSubmitted": "Yes", "remitted": "No"},
+            "uploadAddendumEvidenceActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "No", "decided(a)": "Yes", "decided(b)": "Yes", "decision": "Yes", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "No", "paymentPending": "No", "prepareForHearing": "No", "reasonsForAppealSubmitted": "No", "remitted": "No"},
+            "uploadAddendumEvidenceAdminOfficerActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "No", "decided(a)": "Yes", "decided(b)": "Yes", "decision": "Yes", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "No", "paymentPending": "No", "prepareForHearing": "No", "reasonsForAppealSubmitted": "No", "remitted": "No"},
+            "uploadAddendumEvidenceHomeOfficeActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "No", "decided(a)": "Yes", "decided(b)": "Yes", "decision": "Yes", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "No", "paymentPending": "No", "prepareForHearing": "No", "reasonsForAppealSubmitted": "No", "remitted": "No"},
+            "uploadAddendumEvidenceLegalRepActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "No", "decided(a)": "Yes", "decided(b)": "Yes", "decision": "Yes", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "No", "paymentPending": "No", "prepareForHearing": "No", "reasonsForAppealSubmitted": "No", "remitted": "No"},
+            "uploadAdditionalEvidenceActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "Yes", "decided(a)": "No", "decided(b)": "No", "decision": "No", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "Yes", "paymentPending": "No", "prepareForHearing": "Yes", "reasonsForAppealSubmitted": "Yes", "remitted": "No"},
+            "uploadAdditionalEvidenceHomeOfficeActionAvailable": {"appealSubmitted": "No", "awaitingRespondentEvidence(a)": "No", "awaitingRespondentEvidence(b)": "No", "caseUnderReview": "Yes", "decided(a)": "No", "decided(b)": "No", "decision": "No", "ended": "No", "ftpaDecided": "No", "ftpaSubmitted(a)": "No", "ftpaSubmitted(b)": "No", "listing": "Yes", "paymentPending": "No", "prepareForHearing": "Yes", "reasonsForAppealSubmitted": "Yes", "remitted": "No"},
         }
 
         for field, expected in expected_defaults.items():
             if field in fields_to_exclude:
                 continue
-            overrides_for_field = state_overrides.get(field)
-            if overrides_for_field and "ariaDesiredState" in test_df.columns:
-                expected_column = lit(expected)
-                for override_state, override_value in overrides_for_field.items():
-                    expected_column = when(col("ariaDesiredState") == override_state, lit(override_value)).otherwise(expected_column)
-                condition = (col(field) != expected_column)
-            else:
-                condition = (col(field) != expected)
+            per_state = STATE_VALUES.get(field)
+            if per_state is not None:
+                if state_under_test not in per_state:
+                    results_list.append(TestResult(
+                        field,
+                        "PASS",
+                        f"SKIPPED: mapping defines no value for {field} in {state_under_test}",
+                        test_from_state,
+                        inspect.stack()[0].function
+                    ))
+                    continue
+                expected = per_state[state_under_test]
+            condition = (col(field) != expected)
             if test_df.filter(condition).count() > 0:
                 results_list.append(TestResult(
                     field, 

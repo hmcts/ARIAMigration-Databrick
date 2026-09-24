@@ -41,6 +41,7 @@ def test_AREA_defaultValues(test_df, fields_to_exclude, current_state=None):
             "caseUnderReview", "listing", "prepareForHearing", "decision", "decided",
             "ftpaSubmitted", "ftpaDecided", "remitted",
         }
+        bundle_available_no_states.add("reasonsForAppealSubmitted")
         bundle_available_expected = "Yes"
         if current_state is not None:
             if current_state in bundle_available_no_states:

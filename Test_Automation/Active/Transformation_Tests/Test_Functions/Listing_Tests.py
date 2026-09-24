@@ -246,7 +246,9 @@ def test_Listing_defaultValues(test_df, fields_to_exclude):
 #######################
 def test_hearingRequirements_init(json, M1_bronze):
     try:
-        test_df = json.select(
+        json_columns_to_select = [col("appealReferenceNumber")]
+
+        target_fields = [
             "appealReferenceNumber",
             "isInterpreterServicesNeeded",
             "singleSexCourt",
@@ -255,7 +257,15 @@ def test_hearingRequirements_init(json, M1_bronze):
             "inCameraCourt",
             "inCameraCourtDescription"
             # add language fields
-        )
+        ]
+
+        for field in target_fields:
+            if field in json.columns:
+                json_columns_to_select.append(col(field))
+            else:
+                json_columns_to_select.append(lit(None).alias(field))
+
+        test_df = json.select(*json_columns_to_select)
 
         M1_bronze = M1_bronze.select(
             "CaseNo",
@@ -273,7 +283,7 @@ def test_hearingRequirements_init(json, M1_bronze):
         return test_df, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("hearingRequirements", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
+        return None,TestResult("hearingRequirements", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", None, inspect.stack()[0].function)
     
 
 #######################
@@ -337,26 +347,26 @@ def test_isInterpreterServicesNeeded_test2(test_df):
 #######################
 def test_isInterpreterServicesNeeded_test3(test_df, current_state=None):
     try:
-        if test_from_state != "listing" and test_df.filter(col("isInterpreterServicesNeeded").isNotNull()).count() == 0:
-            return TestResult("isInterpreterServicesNeeded", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        if current_state is not None and current_state != "listing" and test_df.filter(col("isInterpreterServicesNeeded").isNotNull()).count() == 0:
+            return TestResult("isInterpreterServicesNeeded", "PASS", "SKIPPED: Non-mandatory field in downstream state", current_state, inspect.stack()[0].function)
         
         #Check we have Records To test
         if test_df.filter(
             (col("isInterpreterServicesNeeded").isNotNull())
             ).count() == 0:
-            return TestResult("isInterpreterServicesNeeded", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("isInterpreterServicesNeeded", "FAIL", "NO RECORDS TO TEST", current_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
             (col("isInterpreterServicesNeeded").isNull())
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("isInterpreterServicesNeeded","FAIL", f"isInterpreterServicesNeeded acceptance criteria failed: found {acceptance_critera.count()} rows where isInterpreterServicesNeeded is null", test_from_state, inspect.stack()[0].function)
+            return TestResult("isInterpreterServicesNeeded","FAIL", f"isInterpreterServicesNeeded acceptance criteria failed: found {acceptance_critera.count()} rows where isInterpreterServicesNeeded is null", current_state, inspect.stack()[0].function)
         else:
-            return TestResult("isInterpreterServicesNeeded","PASS", "isInterpreterServicesNeeded acceptance criteria pass: all rows have a value for isInterpreterServicesNeeded", test_from_state, inspect.stack()[0].function)
+            return TestResult("isInterpreterServicesNeeded","PASS", "isInterpreterServicesNeeded acceptance criteria pass: all rows have a value for isInterpreterServicesNeeded", current_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
-        return TestResult("isInterpreterServicesNeeded", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+        return TestResult("isInterpreterServicesNeeded", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", current_state, inspect.stack()[0].function) 
     
 #######################
 # singleSexCourt - Check where M1.CourtPreference = 0 and singleSexCourt = No
@@ -444,26 +454,26 @@ def test_singleSexCourt_test3(test_df):
 #######################
 def test_singleSexCourt_test4(test_df, current_state=None):
     try:
-        if test_from_state != "listing" and test_df.filter(col("singleSexCourt").isNotNull()).count() == 0:
-            return TestResult("singleSexCourt", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        if current_state is not None and current_state != "listing" and test_df.filter(col("singleSexCourt").isNotNull()).count() == 0:
+            return TestResult("singleSexCourt", "PASS", "SKIPPED: Non-mandatory field in downstream state", current_state, inspect.stack()[0].function)
         
         #Check we have Records To test
         if test_df.filter(
             (col("singleSexCourt").isNotNull())
             ).count() == 0:
-            return TestResult("singleSexCourt", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt", "FAIL", "NO RECORDS TO TEST", current_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
             (col("singleSexCourt").isNull())
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("singleSexCourt","FAIL", f"singleSexCourt acceptance criteria failed: found {acceptance_critera.count()} rows where singleSexCourt is null", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt","FAIL", f"singleSexCourt acceptance criteria failed: found {acceptance_critera.count()} rows where singleSexCourt is null", current_state, inspect.stack()[0].function)
         else:
-            return TestResult("singleSexCourt","PASS", "singleSexCourt acceptance criteria pass: all rows have a value for singleSexCourt", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt","PASS", "singleSexCourt acceptance criteria pass: all rows have a value for singleSexCourt", current_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
-        return TestResult("singleSexCourt", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+        return TestResult("singleSexCourt", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", current_state, inspect.stack()[0].function) 
 
 #######################
 # singleSexCourtType - Check where M1.CourtPreference = 1 and singleSexCourtType = “All male”
@@ -524,8 +534,8 @@ def test_singleSexCourtType_test2(test_df):
 #######################
 def test_singleSexCourtType_test3(test_df, current_state=None):
     try:
-        if test_from_state != "listing" and test_df.filter(col("singleSexCourtType").isNotNull()).count() == 0:
-            return TestResult("singleSexCourtType", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        if current_state is not None and current_state != "listing" and test_df.filter(col("singleSexCourtType").isNotNull()).count() == 0:
+            return TestResult("singleSexCourtType", "PASS", "SKIPPED: Non-mandatory field in downstream state", current_state, inspect.stack()[0].function)
         
         #Check we have Records To test
         if test_df.filter(
@@ -533,7 +543,7 @@ def test_singleSexCourtType_test3(test_df, current_state=None):
             (col("CourtPreference") != 1) & 
             (col("CourtPreference") != 2)
             ).count() == 0:
-            return TestResult("singleSexCourtType", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtType", "FAIL", "NO RECORDS TO TEST", current_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
         (
@@ -544,12 +554,12 @@ def test_singleSexCourtType_test3(test_df, current_state=None):
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("singleSexCourtType","FAIL", f"singleSexCourtType acceptance criteria failed: found {acceptance_critera.count()} rows where M1.CourtPreference != 1 or 2 and singleSexCourtType is not null", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtType","FAIL", f"singleSexCourtType acceptance criteria failed: found {acceptance_critera.count()} rows where M1.CourtPreference != 1 or 2 and singleSexCourtType is not null", current_state, inspect.stack()[0].function)
         else:
-            return TestResult("singleSexCourtType","PASS", "singleSexCourtType acceptance criteria pass: all rows where M1.CourtPreference != 1 or 2 have singleSexCourtType is null", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtType","PASS", "singleSexCourtType acceptance criteria pass: all rows where M1.CourtPreference != 1 or 2 have singleSexCourtType is null", current_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
-        return TestResult("singleSexCourtType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+        return TestResult("singleSexCourtType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", current_state, inspect.stack()[0].function) 
 
 #######################
 # singleSexCourtTypeDescription - Check where M1.CourtPreference = 1 and singleSexCourtTypeDescription = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."
@@ -610,8 +620,8 @@ def test_singleSexCourtTypeDescription_test2(test_df):
 #######################
 def test_singleSexCourtTypeDescription_test3(test_df, current_state=None):
     try:
-        if test_from_state != "listing" and test_df.filter(col("singleSexCourtTypeDescription").isNotNull()).count() == 0:
-            return TestResult("singleSexCourtTypeDescription", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        if current_state is not None and current_state != "listing" and test_df.filter(col("singleSexCourtTypeDescription").isNotNull()).count() == 0:
+            return TestResult("singleSexCourtTypeDescription", "PASS", "SKIPPED: Non-mandatory field in downstream state", current_state, inspect.stack()[0].function)
         
         #Check we have Records To test
         if test_df.filter(
@@ -619,7 +629,7 @@ def test_singleSexCourtTypeDescription_test3(test_df, current_state=None):
             (col("CourtPreference") != 1) &
             (col("CourtPreference") != 2)
             ).count() == 0:
-            return TestResult("singleSexCourtTypeDescription", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription", "FAIL", "NO RECORDS TO TEST", current_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
         (
@@ -630,12 +640,12 @@ def test_singleSexCourtTypeDescription_test3(test_df, current_state=None):
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("singleSexCourtTypeDescription","FAIL", f"singleSexCourtTypeDescription acceptance criteria failed: found {acceptance_critera.count()} rows where M1.CourtPreference != 1 or 2 and singleSexCourtTypeDescription is not null", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription","FAIL", f"singleSexCourtTypeDescription acceptance criteria failed: found {acceptance_critera.count()} rows where M1.CourtPreference != 1 or 2 and singleSexCourtTypeDescription is not null", current_state, inspect.stack()[0].function)
         else:
-            return TestResult("singleSexCourtTypeDescription","PASS", "singleSexCourtTypeDescription acceptance criteria pass: all rows where M1.CourtPreference != 1 or 2 and singleSexCourtTypeDescription is null", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription","PASS", "singleSexCourtTypeDescription acceptance criteria pass: all rows where M1.CourtPreference != 1 or 2 and singleSexCourtTypeDescription is null", current_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
-        return TestResult("singleSexCourtTypeDescription", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+        return TestResult("singleSexCourtTypeDescription", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", current_state, inspect.stack()[0].function) 
 
 #######################
 # inCameraCourt - Check where M1.inCamera = 1 and inCameraCourt = Yes
@@ -696,26 +706,26 @@ def test_inCameraCourt_test2(test_df):
 #######################
 def test_inCameraCourt_test3(test_df, current_state=None):
     try:
-        if test_from_state != "listing" and test_df.filter(col("inCameraCourt").isNotNull()).count() == 0:
-            return TestResult("inCameraCourt", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        if current_state is not None and current_state != "listing" and test_df.filter(col("inCameraCourt").isNotNull()).count() == 0:
+            return TestResult("inCameraCourt", "PASS", "SKIPPED: Non-mandatory field in downstream state", current_state, inspect.stack()[0].function)
         
         #Check we have Records To test
         if test_df.filter(
             (col("inCameraCourt").isNotNull())
             ).count() == 0:
-            return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST", current_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
             (col("inCameraCourt").isNull())
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("inCameraCourt","FAIL", f"inCameraCourt acceptance criteria failed: found {acceptance_critera.count()} rows where inCameraCourt is null", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt","FAIL", f"inCameraCourt acceptance criteria failed: found {acceptance_critera.count()} rows where inCameraCourt is null", current_state, inspect.stack()[0].function)
         else:
-            return TestResult("inCameraCourt","PASS", "inCameraCourt acceptance criteria pass: all rows have inCameraCourt is not null", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt","PASS", "inCameraCourt acceptance criteria pass: all rows have inCameraCourt is not null", current_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
-        return TestResult("inCameraCourt", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+        return TestResult("inCameraCourt", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", current_state, inspect.stack()[0].function) 
 
 #######################
 # inCameraCourtDescription - Check where M1.InCamera = 1 and inCameraCourtDescription = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."
@@ -749,14 +759,14 @@ def test_inCameraCourtDescription_test1(test_df):
 #######################
 def test_inCameraCourtDescription_test2(test_df, current_state=None):
     try:
-        if test_from_state != "listing" and test_df.filter(col("inCameraCourtDescription").isNotNull()).count() == 0:
-            return TestResult("inCameraCourtDescription", "PASS", "SKIPPED: Non-mandatory field in downstream state", test_from_state, inspect.stack()[0].function)
+        if current_state is not None and current_state != "listing" and test_df.filter(col("inCameraCourtDescription").isNotNull()).count() == 0:
+            return TestResult("inCameraCourtDescription", "PASS", "SKIPPED: Non-mandatory field in downstream state", current_state, inspect.stack()[0].function)
         
         #Check we have Records To test
         if test_df.filter(
             (col("inCamera").isNull()) | (col("inCamera") == False)
             ).count() == 0:
-            return TestResult("inCameraCourtDescription", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourtDescription", "FAIL", "NO RECORDS TO TEST", current_state, inspect.stack()[0].function)
 
         acceptance_critera = test_df.filter(
             ((col("inCamera").isNull()) | (col("inCamera") == False)) & 
@@ -764,12 +774,12 @@ def test_inCameraCourtDescription_test2(test_df, current_state=None):
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("inCameraCourtDescription","FAIL", f"inCameraCourtDescription acceptance criteria failed: found {acceptance_critera.count()} where M1.InCamera != 1 and inCameraCourtDescription is not omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourtDescription","FAIL", f"inCameraCourtDescription acceptance criteria failed: found {acceptance_critera.count()} where M1.InCamera != 1 and inCameraCourtDescription is not omitted", current_state, inspect.stack()[0].function)
         else:
-            return TestResult("inCameraCourtDescription","PASS", "inCameraCourtDescription acceptance criteria pass: all rows where M1.InCamera != 1 have inCameraCourtDescription is omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourtDescription","PASS", "inCameraCourtDescription acceptance criteria pass: all rows where M1.InCamera != 1 have inCameraCourtDescription is omitted", current_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
-        return TestResult("inCameraCourtDescription", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+        return TestResult("inCameraCourtDescription", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", current_state, inspect.stack()[0].function) 
     
 
 ################################################

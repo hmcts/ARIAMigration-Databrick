@@ -34,11 +34,13 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
               all_test_results.append(list_tests.test_singleSexCourt_test1(test_df))
               all_test_results.append(list_tests.test_singleSexCourt_test2(test_df))
               all_test_results.append(list_tests.test_singleSexCourt_test3(test_df))
+              all_test_results.append(list_tests.test_singleSexCourt_test4(test_df, current_state))
 
          if "singleSexCourtType" not in fields_to_exclude:
               all_test_results.append(list_tests.test_singleSexCourtType_test1(test_df))
               all_test_results.append(list_tests.test_singleSexCourtType_test2(test_df))
               all_test_results.append(list_tests.test_singleSexCourtType_test3(test_df, current_state))
+              
 
          if "singleSexCourtTypeDescription" not in fields_to_exclude:
               all_test_results.append(list_tests.test_singleSexCourtTypeDescription_test1(test_df))

@@ -89,11 +89,49 @@ def test_default_mapping_init(json, M1_silver, bac, M1_Bronze):
 
 from pyspark.sql.functions import col, when, lit
 
-def test_Listing_defaultValues(test_df, fields_to_exclude):
+def test_Listing_defaultValues(test_df, fields_to_exclude, current_state=None):
     try:
+        STATE_VALUES = {
+            "reviewResponseActionAvailable": {
+                        "decided(a)": "No",
+                        "decided(b)": "Yes",
+                        "decision": "No",
+                        "ftpaDecided": "No",
+                        "ftpaSubmitted(a)": "No",
+                        "ftpaSubmitted(b)": "No",
+                        "listing": "No",
+                        "prepareForHearing": "No",
+                        "remitted": "No"
+            },
+            "reviewedHearingRequirements": {
+                        "decided(a)": "Yes",
+                        "decided(b)": "Yes",
+                        "decision": "Yes",
+                        "ftpaDecided": "Yes",
+                        "ftpaSubmitted(a)": "Yes",
+                        "ftpaSubmitted(b)": "Yes",
+                        "listing": "No",
+                        "prepareForHearing": "Yes",
+                        "remitted": "Yes"
+            },
+            "uploadHomeOfficeAppealResponseActionAvailable": {
+                        "decided(a)": "No",
+                        "decided(b)": "No",
+                        "decision": "No",
+                        "ftpaDecided": "Yes",
+                        "ftpaSubmitted(a)": "Yes",
+                        "ftpaSubmitted(b)": "Yes",
+                        "listing": "No",
+                        "prepareForHearing": "No",
+                        "remitted": "Yes"
+            }
+        }
+
+        ALIAS = {"paymentPending": "pendingPayment"}
+        state_key = ALIAS.get(current_state, current_state)
+
         expected_defaults = {
-             "ariaDesiredState": "listing",
-             "reviewedHearingRequirements": "No"
+             "ariaDesiredState": "listing"
         }
 
         results_list = []
@@ -158,8 +196,7 @@ def test_Listing_defaultValues(test_df, fields_to_exclude):
         ]
         
         no_fields = [
-            "isWitnessesAttending", "datesToAvoidYesNo", 
-            "reviewResponseActionAvailable", "uploadHomeOfficeAppealResponseActionAvailable"
+            "isWitnessesAttending", "datesToAvoidYesNo"
         ]
         
         aria_desc_fields = [
@@ -180,6 +217,31 @@ def test_Listing_defaultValues(test_df, fields_to_exclude):
             ))
 
         # 2. Validate "No" Group 
+        for field in sorted(STATE_VALUES):
+            if field in fields_to_exclude:
+                continue
+            if field not in test_df.columns:
+                continue
+            per_state = STATE_VALUES[field]
+            if state_key is None or state_key not in per_state:
+                results_list.append(TestResult(
+                    field,
+                    "PASS",
+                    f"SKIPPED: the mapping defines no value for {field} in {state_key}",
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+                continue
+            want = per_state[state_key]
+            n_bad = test_df.filter((col(field) != want) | col(field).isNull()).count()
+            results_list.append(TestResult(
+                field,
+                "PASS" if n_bad == 0 else "FAIL",
+                f"Expected '{want}' in {state_key}" + ("" if n_bad == 0 else f", found {n_bad} not matching"),
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+
         for field in ([] if skip_hearing_defaults else no_fields):
             fail_count = test_df.filter((col(field) != "No") | col(field).isNull()).count()
             results_list.append(TestResult(

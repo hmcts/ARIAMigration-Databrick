@@ -15,7 +15,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
          all_test_results.append(test_data_setup)
 
     if test_df != None:
-        all_test_results.extend(list_tests.test_Listing_defaultValues(test_df, fields_to_exclude))
+        all_test_results.extend(list_tests.test_Listing_defaultValues(test_df, fields_to_exclude, current_state))
 
 
     # -- HearingRequirements --

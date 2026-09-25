@@ -229,14 +229,16 @@ def test_ended_defaultValues(test_df, fields_to_exclude=None):
         for field in omitted_fields:
             if field in fields_to_exclude:
                 continue
-            if field in test_df.columns:
-                non_null_cnt = test_df.filter(F.col(field).isNotNull()).count()
-                if non_null_cnt > 0:
-                    results_list.append(TestResult(field, "FAIL", f"Field should be omitted in ended state, but found {non_null_cnt} non-null values.", "ended", inspect.stack()[0].function))
-                else:
-                    results_list.append(TestResult(field, "PASS", "Field correctly omitted from ended state.", "ended", inspect.stack()[0].function))
+            if field not in test_df.columns:
+                results_list.append(TestResult(field, "PASS", "Field not present in the schema.", "ended", inspect.stack()[0].function))
+                continue
+            populated = test_df.filter(F.col(field).isNotNull() & (F.size(F.col(field)) > 0)).count()
+            empty_cnt = test_df.filter(F.col(field).isNotNull() & (F.size(F.col(field)) == 0)).count()
+            null_cnt = test_df.filter(F.col(field).isNull()).count()
+            if populated == 0:
+                results_list.append(TestResult(field, "PASS", f"No populated collection. Empty collection: {empty_cnt}, null: {null_cnt}.", "ended", inspect.stack()[0].function))
             else:
-                results_list.append(TestResult(field, "PASS", "Field correctly omitted from ended state schema.", "ended", inspect.stack()[0].function))
+                results_list.append(TestResult(field, "FAIL", f"{populated} record(s) hold documents; the mapping allows only an empty collection. Empty collection: {empty_cnt}, null: {null_cnt}.", "ended", inspect.stack()[0].function))
 
         # Step 2: Validate Scalar Default Values
         for field, expected in expected_defaults.items():

@@ -14,5 +14,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_APPEAL_SUBMITTED_JSON"
-      target: appealSubmitted_gold
+      catalog: aria_${bundle.target}
+      schema: appealSubmitted_gold
       development: true

@@ -13,5 +13,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_APPEALS_FTA"
+      catalog: aria_${bundle.target}
       schema: ariadm_arm_fta
       development: true

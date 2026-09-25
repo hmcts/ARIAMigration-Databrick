@@ -71,39 +71,40 @@ def test_CUR_defaultValues(test_df, fields_to_exclude):
                     inspect.stack()[0].function
                 ))
 
-        # Check for LR (Expected: 'Yes')
-        fail_lr = test_df.filter(
-            (col("dv_representation") == "LR") & 
-            ((col("caseArgumentAvailable") != "Yes") | col("caseArgumentAvailable").isNull())
-        )
+        if "caseArgumentAvailable" not in fields_to_exclude:
+            # Check for LR (Expected: 'Yes')
+            fail_lr = test_df.filter(
+                (col("dv_representation") == "LR") & 
+                ((col("caseArgumentAvailable") != "Yes") | col("caseArgumentAvailable").isNull())
+            )
 
-        # Check for AIP (Expected: Null)
-        fail_aip = test_df.filter(
-            (col("dv_representation") == "AIP") & 
-            (col("caseArgumentAvailable").isNotNull())
-        )
+            # Check for AIP (Expected: Null)
+            fail_aip = test_df.filter(
+                (col("dv_representation") == "AIP") & 
+                (col("caseArgumentAvailable").isNotNull())
+            )
 
-        # Log LR Results
-        if fail_lr.count() != 0:
-            results_list.append(TestResult(
-                "caseArgumentAvailable_LR", 
-                "FAIL", 
-                f"LR Mapping Error: Expected 'Yes', found {fail_lr.count()} records with wrong values/nulls", 
-                test_from_state,
-                inspect.stack()[0].function
-            ))
-        else:
-            results_list.append(TestResult("caseArgumentAvailable_LR", "PASS", "LR Mapping correct", test_from_state, inspect.stack()[0].function))
+            # Log LR Results
+            if fail_lr.count() != 0:
+                results_list.append(TestResult(
+                    "caseArgumentAvailable_LR", 
+                    "FAIL", 
+                    f"LR Mapping Error: Expected 'Yes', found {fail_lr.count()} records with wrong values/nulls", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+            else:
+                results_list.append(TestResult("caseArgumentAvailable_LR", "PASS", "LR Mapping correct", test_from_state, inspect.stack()[0].function))
 
-        # Log AIP Results
-        if fail_aip.count() != 0:
-            results_list.append(TestResult(
-                "caseArgumentAvailable_AIP", 
-                "FAIL", 
-                f"AIP Mapping Error: Expected Null, found {fail_aip.count()} records with data", 
-                test_from_state,
-                inspect.stack()[0].function
-            ))
+            # Log AIP Results
+            if fail_aip.count() != 0:
+                results_list.append(TestResult(
+                    "caseArgumentAvailable_AIP", 
+                    "FAIL", 
+                    f"AIP Mapping Error: Expected Null, found {fail_aip.count()} records with data", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
         else:
             results_list.append(TestResult("caseArgumentAvailable_AIP", "PASS", "AIP Mapping correctly Null", test_from_state, inspect.stack()[0].function))
             

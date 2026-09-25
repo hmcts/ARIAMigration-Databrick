@@ -127,7 +127,10 @@ def test_general_init(json, M1_bronze, M2_bronze):
             "CaseNo"
         )
 
-        M2_bronze = M2_bronze.select(
+        # Filter M2_bronze for Main Appellant only (Relationship IS NULL)
+        M2_bronze = M2_bronze.filter(
+            col("Relationship").isNull()
+        ).select(
             col("CaseNo").alias("M2_CaseNo"),
             "Appellant_Name"
         )

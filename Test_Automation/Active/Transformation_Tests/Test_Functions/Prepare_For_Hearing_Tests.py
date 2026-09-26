@@ -281,11 +281,18 @@ def test_isAppealSuitableToFloat_test2(test_df):
 #######################
 def test_isAppealSuitableToFloat_test3(test_df):
     try:
+        # Added CaseStatus filter to match state context in test1 and test2
+        test_df = test_df.filter(col("CaseStatus").isin(37,38))
+
         #Check we have Records To test
         if test_df.filter(
             col("isAppealSuitableToFloat").isNotNull()
             ).count() == 0:
             return TestResult("isAppealSuitableToFloat", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+        test_df = test_df.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
 
         yes_no = test_df.filter(
             (col("isAppealSuitableToFloat") == "Yes") |
